@@ -1,0 +1,64 @@
+Remuse.co privacy policy
+
+Hello and thank you so much for using Remuse.co
+As you know, we offer the free monthly Remuseletter and a premium weekly letter for our subscribers, who have access to the online real-time system for submitting tracks, voting on tracks, writing reviews, and rating reviews.
+
+This privacy policy might change, but the general gist will always be the same:
+
+The privacy policy is all about protecting your privacy.  We do not share your email or contact info with anyone for any reason.
+The only place your e-mail is stored is: at Stripe HQ (and whatever they do with it) for payment processing, it's all Stripe.  
+We store your e-mail in our database and only use it to contact you regarding your account and for the weekly Remuseletter (monthly reduced digest for the free tier).
+If we are asked by law enforcement, and you are local to the US, we will have to comply, but if you live in Switzerland it's a bit more murky.  
+Anyway, it would be great if you would not do illegal things on our platform, honoring your local jurisdiction.  I think that is fair for the internet.
+We do not sell or share your data.  We are not in the business of giving you a free service and fucking you over.  We are in the business of enabling music discovery in the modern era and helping artists and musicians not starve.
+You can unsubscribe from our e-mails and comms (communications) hassle-free at any time via the link in the email.  
+We use Brevo (nee Sendinblue) for e-mail and appreciate you never marking our e-mails as spam!  They are meant to help you find new music and philosophy for a joyful life.
+
+"We used to play for silver, now we play for life" - The Grateful Dead
+
+You can contact us at any time privacy@remuse.co to ask us about the privacy policy if you need clarification.
+If you think this privacy policy is lacking in any particular way, also advise us.
+
+Should there be an information breach, we will let you know as soon as we discover it and can tactfully word it.  However, we believe this sort of happening to be extremely unlikely due to our anal-retentive security team's fortitude.
+
+What happens when you cancel your membership
+Well, to your account? nothing.  Your account info, votes, favorites stay intact for a while.  You can login but without an active subscription your motions will be inert.
+We may decide to expunge inactive accounts after a certain period of time to unskew voting/ratings if someone gets cute and decides to make multiple accounts to unfairly influence the values on the site.
+In general, you gotta pay to play, so we respect anyone who has paid us once or ongoingly and strive to provide the best in uninterrupted service.
+
+Remuse.co is designed by musicians, for musicians, so we really appreciate any and all support.
+
+Your membership makes our work, of filtering the tsunami of fresh music in the modern era, possible.
+
+
+
+Or the print-friendly, school-house-friendly version of the above:
+
+Remuse.co privacy policy
+
+Hello, music lovers, and thank you for taking the time to review our privacy policy.
+
+As music enthusiasts, we recognize that music is a universal language that doesn't require a passport. In keeping with that spirit, we want to reassure you that we will do everything in our power to ensure that your data remains as safe and secure as your favorite record.
+
+We store your email in our database and only use it for the monthly Remuseletter (we don't spam, we swear!). If you'd like to opt out, just click the unsubscribe link in any of our emails.
+
+Also, should there be a data breach, we will notify you as soon as we become aware of it, because we want to be transparent and accountable.
+
+To be clear, we don't sell or share your data because we value your privacy and your trust in us.
+
+We thank you for your support, which allows us to continue doing what we love: promoting great music.
+
+"We used to play for silver, now we play for life" - The Grateful Dead
+
+If you have any concerns or questions about our privacy policy, don't hesitate to reach out to us at privacy@remuse.co. After all, we're here to help, and we're all in this together.
+
+Let the music play!
+
+We look forward to jamming with you,
+
+Vincent Pulling and The Remuse Team
+
+Your privacy is our priority. If you have any concerns or suggestions about our policy, don't hesitate to contact us.
+
+PS. At any time, we may need to update this policy. If we do, we'll let you know.
+

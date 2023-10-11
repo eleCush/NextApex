@@ -1,0 +1,256 @@
+;let's add the review queue
+
+#?(:clj
+   (defn review-queue-records [db]
+     (->> (xt/q db '{:find [(pull ?e [:xt/id :queue/id :queue/title])]
+                     :where [[?e :queue/id]]})
+          (map first)
+          vec)))
+
+(e/defn QueueItemModify [id]
+  (e/server
+   (let [e (xt/entity db id)
+         queue-id (:queue/id e)
+         title (:queue/title e)
+         last-modified (:queue/last-modified e)
+         created-at (:queue/created-at e)
+         created-by (:queue/created-by e)
+         modified-by (:queue/modified-by e)]
+         ;art (:queue/art e)
+        ; art-description (:queue/art-description e)
+     (e/client
+      (dom/div
+       (InputSubmit. (str (when (empty? title) "queue item") title)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :queue/id (or queue-id (ni))
+                                                :queue/created-at (or created-at e/system-time-ms)
+                                                :queue/last-modified e/system-time-ms
+                                                :queue/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                  ;:queue/art art
+                                                  ;:queue/art-description art-description
+                                                :queue/title v}]])))))
+       (dom/span (dom/text (str queue-id " | " title " | " created-by " | " id))))))))
+
+(e/defn QueueItem [id]
+  (e/server
+   (let [e (xt/entity db id)
+         queue-id (:queue/id e)
+         title (:queue/title e)
+         last-modified (:queue/last-modified e)
+         created-at (:queue/created-at e)
+         created-by (:queue/created-by e)
+         modified-by (:queue/modified-by e)
+
+         ;;do a query for all the ratings on target (queue-id)
+         ratings (-> (xt/q db '{:find [?xt-id ?rating-target ?rating-value ?created-by ?rating-value]
+                                :where [[?r :rating/id ?xt-id]
+                                        [?r :rating/value ?rating-value]
+                                        [?r :rating/target ?rating-target]
+                                        [?r :rating/created-by ?created-by]]
+                                :in [?rating-target]}
+                           queue-id)) ;;queue-id is the rating-target
+
+
+         ratings-by-this-user (-> (xt/q db '{:find [[?rating-xt-id ?rating-id ?rating-target ?rating-value ?rating-value]]
+                                             :where [[?r :xt/id ?rating-xt-id]
+                                                     [?r :rating/id ?rating-id]
+                                                     [?r :rating/value ?rating-value]
+                                                     [?r :rating/target ?rating-target]
+                                                     [?r :rating/created-by ?created-by]]
+                                             :in [?rating-target ?created-by]}
+                                        queue-id (get-in e/*http-request* [:cookies "remewserid" :value])) ;;queue-id is the rating-target, created-by is this get-in
+                                  first first)
+         rating-xt-id (first ratings-by-this-user)
+         rating-id (second ratings-by-this-user)
+         rrz (into [] ratings)
+         rating-score (reduce +
+                              (map (fn [sub-vec]
+                                     (cond (= (nth sub-vec 2) :doubleplus) 3
+                                           (= (nth sub-vec 2) :plus) 1
+                                           (= (nth sub-vec 2) :minus) -1
+                                           :else 0)) rrz))]
+         ;; let's take the ++, +, and - ratings and derive a "buoyancy" . +3, +1, and -2
+         ;art (:queue/art e)
+        ; art-description (:queue/art-description e)
+     (e/client
+      (dom/div (dom/props {:class "qirline"})
+               (dom/span (dom/props {:class "qidbloc"}) (dom/text (str queue-id)))
+               (dom/span (dom/props {:class "qirt"}) (dom/text (str title)); " | " rating-id " | " rating-xt-id " | " rating-score))
+         ;(dom/span (dom/props {:class "rax"}) (dom/text (str ratings)))
+                 ;(dom/div (dom/props {:class "qirating"}) (dom/text r8))
+                         (dom/div (dom/props {:class "rc"})
+                                  (dom/div (dom/props {:class "rcrc"})
+                                           (dom/text rating-score))
+                                  (dom/div (dom/props {:class "ratecontain"})
+                                           (ui/button
+                                            (e/fn []
+                                              (e/server
+                                               (if (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value])))
+                                                 (e/discard
+                                                  (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                        {:xt/id (or rating-xt-id (random-uuid))
+                                                                         :rating/id (or rating-id (nir))
+                                                                         :rating/created-at e/system-time-ms
+                                                                         :rating/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                         :rating/target queue-id
+                                                                         :rating/value :doubleplus}]]))
+                                                 (e/client (reset! client-message "Must have musician membership to vote on Review Queue items")))))
+                                            (dom/props {:class "dblp b"})
+                                            (dom/text "++")))
+                                  (dom/div (dom/props {:class "ratecontain"})
+                                           (ui/button
+                                            (e/fn []
+                                              (e/server
+                                               (if (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value])))
+                                                 (e/discard
+                                                  (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                        {:xt/id (or rating-xt-id (random-uuid))
+                                                                         :rating/id (or rating-id (nir))
+                                                                         :rating/created-at e/system-time-ms
+                                                                         :rating/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                         :rating/target queue-id
+                                                                         :rating/value :plus}]]))
+                                                 (e/client (reset! client-message "Must have musician membership to vote on Review Queue items")))))
+                                            (dom/props {:class "dblp b"})
+                                            (dom/text "+")))
+                                  (dom/div (dom/props {:class "ratecontain"})
+                                           (ui/button
+                                            (e/fn []
+                                              (e/server
+                                               (if (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value])))
+                                                 (e/discard
+                                                  (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                        {:xt/id (or rating-xt-id (random-uuid))
+                                                                         :rating/id (or rating-id (nir))
+                                                                         :rating/created-at e/system-time-ms
+                                                                         :rating/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                         :rating/target queue-id
+                                                                         :rating/value :minus}]]))
+                                                 (e/client (reset! client-message "Must have musician membership to vote on Review Queue items")))))
+                                            (dom/props {:class "sngn b"})
+                                            (dom/text "-"))))))))))
+
+(e/defn QueueCreate []
+  (e/client
+   (dom/div
+    (InputSubmit. "Queue Create"
+                  (e/fn [v]
+                    (e/server
+                     (e/discard
+                      (xt/submit-tx !xtdb [[:xtdb.api/put
+                                            {:xt/id (random-uuid)
+                                             :queue/id (ni)
+                                             :queue/created-at e/system-time-ms
+                                             :queue/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                             :queue/title v}]]))))))))
+
+(e/defn QueueList []
+  (dom/div (dom/props {:class "queue-list"})
+           (QueueCreate.)
+           (dom/div (dom/props {:class "queue-items"})
+                    (e/server
+                     (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(review-queue-records db))]
+                               (QueueItemModify. id))))))
+
+;now let's add projects
+;;nice now let's add some projects=artists (not merch-artists=artisans=creators)
+
+#?(:clj
+   (defn project-records [db]
+     (->> (xt/q db '{:find [(pull ?e [:xt/id :project/title])]
+                     :where [[?e :project/title]]})
+          (map first)
+          (sort-by :project/title)
+          vec)))
+
+(e/defn ProjectItem [id]
+  (e/server
+   (let [e (xt/entity db id)
+         project-id (:project/id e)
+         title (:project/title e)
+         last-modified (:project/last-modified e)
+         created-at (:project/created-at e)
+         modified-by (:project/modified-by e)
+         art (:project/art e)
+         art-description (:projectproject/art-description e)]
+     (e/client
+      (dom/div
+       (dom/span (dom/text (str "project title: " title)))
+       (dom/br)
+       (dom/span (dom/text (str "last modified: " last-modified)))
+       (dom/br)
+       (dom/span (dom/text (str "created-at: " created-at)))
+       (dom/br)
+       (dom/span (dom/text (str "project-id: " project-id)))
+       (dom/br)
+       (dom/span (dom/text (str "Modified by: " modified-by)))
+       (dom/br)
+       (dom/span (dom/text (str "project art: " art)))
+       (dom/br)
+       (dom/span (dom/text (str "project art desc: " art-description)))
+       (dom/br)
+       (InputSubmit. (str title)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :project/id (or project-id (ni))
+                                                :project/created-at (or created-at e/system-time-ms)
+                                                :project/last-modified e/system-time-ms
+                                                :project/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :project/art art
+                                                :project/art-description art-description
+                                                :project/title v}]])))))
+       (InputSubmit. (str art)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :project/id (or project-id (ni))
+                                                :project/created-at (or created-at e/system-time-ms)
+                                                :project/last-modified e/system-time-ms
+                                                :project/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :project/art v
+                                                :project/art-description art-description
+                                                :project/title title}]])))))
+       (InputSubmit. (str art-description)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :project/id (or project-id (ni))
+                                                :project/created-at (or created-at e/system-time-ms)
+                                                :project/last-modified e/system-time-ms
+                                                :project/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :project/art art
+                                                :project/art-description v
+                                                :project/title title}]]))))))))))
+
+(e/defn ProjectList []
+  (dom/div (dom/props {:class "project-list"})
+           (ProjectCreate.)
+           (dom/div {:class "project-items"}
+                    (e/server
+                     (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(project-records db))]
+                               (ProjectItem. id))))))
+
+
+(e/defn ProjectCreate []
+  (e/client
+   (InputSubmit. "Project Title"
+                 (e/fn [v]
+                   (e/server
+                    (e/discard
+                     (xt/submit-tx !xtdb [[:xtdb.api/put
+                                           {:xt/id (random-uuid)
+                                            :project/id (ni)
+                                            :project/created-at e/system-time-ms
+                                            :project/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                            :project/title v}]])))))))

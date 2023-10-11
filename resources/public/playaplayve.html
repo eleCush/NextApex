@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Spotify Web Playback SDK Quick Start</title>
+    <script>
+      var dvid = 'not yet set'
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        const token = 'BQA8Mbt3W3QKMJHdMEZ8UAI__WUZKj50w2Y4Zcqa2K0SUd3-w8yiY1wNLa3Ugk_EHzW-c1uMlXmyv0_60b79rDyNZK85ArRt_LYdqUhCwfxuQGJ4OqoQk2L5XUNqulCua94GEIMzBwTstmh4PZs8mOhmWvis2ZwoaExxT0ppN31jWkc0WBGNQ2mXqG-cg1YEpqK9KjLPL5dawHIhmOp05JEay5s3wjWO';
+        const player = new Spotify.Player({
+          name: 'Web Playback SDK Quick Start Player',
+          getOAuthToken: cb => { cb(token); },
+          volume: 0.5
+        });
+
+        document.getElementById('togglePlay').onclick = function() {
+          player.togglePlay();
+        };
+
+        // Play a specified track on the Web Playback SDK's device ID
+        const play = ({
+          spotify_uri,
+          playerInstance: {
+            _options: {
+              getOAuthToken,
+              id
+            }
+          }
+        }) => {
+          getOAuthToken(access_token => {
+            fetch('https://api.spotify.com/v1/me/player/play?device_id='+dvid, {
+              method: 'PUT',
+              body: JSON.stringify({ uris: [spotify_uri] }),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${access_token}`
+              },
+            });
+          });
+        };
+        
+        // Ready
+        player.addListener('ready', ({ device_id }) => {
+          console.log('Ready with Device ID', device_id);
+        });
+
+        // Not Ready
+        player.addListener('not_ready', ({ device_id }) => {
+          console.log('Device ID has gone offline', device_id);
+        });
+
+        player.addListener('initialization_error', ({ message }) => {
+          console.error(message);
+        });
+
+        player.addListener('authentication_error', ({ message }) => {
+          console.error(message);
+        });
+
+        player.addListener('account_error', ({ message }) => {
+          console.error(message);
+        });
+
+        player.connect();
+
+        player.addListener('ready', ({ device_id }) => {
+          dvid = device_id;
+          console.log('Ready with Device ID', device_id);
+          
+          play({
+            playerInstance: player,
+            spotify_uri: 'spotify:track:6tGkUZLUfGyrIOkcXoeHrl', // Play a specific track
+          });
+        });
+        
+
+      };
+    </script>
+  </head>
+  <body>
+    <h1>Spotify Web Playback SDK Quick Start</h1>
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <button id="togglePlay">Toggle Play</button>
+
+  </body>
+</html>
+
+

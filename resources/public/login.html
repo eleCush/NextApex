@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login to your Remuse account</title>
+    <style>
+           body {
+            font-family: 'Futura', sans-serif;
+            font-size: 31px;
+            background: linear-gradient(45deg, transparent 50%, hsl(170,50%,50%) 50%), peachpuff;
+            display: flex;
+            justify-content: top;
+            align-items: center;
+            height: 250vh;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            flex-direction: column;
+            margin-bottom: 50px;
+        }
+
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,.7);
+            margin: 40px;
+            width: 70%;
+            max-width: 511px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-bottom: 55px;
+            font-size: 24px;
+        }
+        input {font-size: 18px;
+                box-shadow: 0 0 1px #333;
+                background-color: #fff;
+                border-radius: 15px;
+                height: 2em;}
+        .iti {position: absolute;
+              bottom: 0; right: 3px;
+              width: 43px; height: 43px;}
+        .description {padding: 2em;}
+        .lwmli {font-size: 0.7em; position: absolute; bottom: 10px; left: 10px;}
+        .btm {position: fixed; bottom: 0; font-size: 0.65em;}
+</style>
+</head>
+<body>
+    <form action="/authentik9" method="post">
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required autofocus="true">
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br>
+        <input type="submit" value="Login with Password">
+        <img class="iti" src="img/R<><>S.png"/>
+        <a href="magiclink.html" class="lwmli">Login with Magic Link instead</a>
+    </form>
+
+
+    <div class="description">
+      <h2>Welcome to Remuse!</h2>
+      <p>If you're new here, you're just in time. Our pricing model increases with each new membership, so the earlier you join, the less you pay. It's our way of rewarding early adopters and encouraging sustainable platform growth.</p>
+      <p>Remuse is a unique space where musicians and music lovers alike are invited to share their favorite tracks. We're on a mission to shorten the time it takes to discover and share great music. With us, you're part of a vibrant community experiencing the thrill of discovering beautiful tracks together.</p>
+      <p>As a subscriber, you're not just a member, but a contributor to the lively Remuse community. Here's what you get:</p>
+      <ul>
+          <li>Login via Magic Link or Password</li>
+          <li>Exclusive access to our main Listening Party Chatroom</li>
+          <li>The power to rate tracks and reviews</li>
+          <li>Submit tracks to the review queue</li>
+          <li>Receive our Fresh Music Remuse-letter via email</li>
+      </ul>
+      <p>Help make Remuse the best music discovery service in the world! Become a part of a lively community held together by the love of music.</p>
+  </div>
+  <form action="/create-account" method="get">
+    <input type="submit" value="Create an Account">
+    <img class="iti" src="img/R<><>S.png"/>
+</form>
+
+<a href="privacy.txt">Privacy Policy</a>
+<a href="/" class="btm">Remuse.co Multiplayer Track Reviews Home</a>
+</body>
+</html>

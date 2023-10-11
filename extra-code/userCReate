@@ -1,0 +1,22 @@
+(e/defn UserCreate []
+  (e/client
+   ;(dom/div (dom/text (str "Cust count: " cust-count)))
+   (InputSubmit.
+    "Fresh User email"
+    (e/fn [v]
+      (e/server
+       (let [recs (e/offload #(user-records db))
+             cust-count (count recs)]
+        (e/discard
+         (xt/submit-tx
+          !xtdb
+          [[:xtdb.api/put
+            {:xt/id (random-uuid)
+             :user/id (ni)
+             :user/remewserid (str "RMWS|WSR|V000|" cust-count)
+             :user/created-at e/system-time-ms
+             :user/created-by "vincent-stem-15july2023"
+             :user/modified-by "vincent-stem-15july2023"
+             :user/modified-at e/system-time-ms
+             :user/username "New Member"
+             :user/email v}]]))))))))

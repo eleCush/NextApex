@@ -1,0 +1,198 @@
+;;Great, let's add albums
+
+#?(:clj
+   (defn album-records [db]
+     (->> (xt/q db '{:find [(pull ?e [:xt/id :album/title])]
+                     :where [[?e :album/title]]})
+          (map first)
+          (sort-by :album/title)
+          vec)))
+
+(e/defn AlbumCreate []
+  (e/client
+   (InputSubmit. "Album Title"
+                 (e/fn [v]
+                   (e/server
+                    (e/discard
+                     (xt/submit-tx !xtdb [[:xtdb.api/put
+                                           {:xt/id (random-uuid)
+                                            :album/id (ni)
+                                            :album/created-at e/system-time-ms
+                                            :album/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                            :album/title v}]])))))))
+
+(e/defn AlbumItem [id]
+  (e/server
+   (let [e (xt/entity db id)
+         album-id (:album/id e)
+         title (:album/title e)
+         last-modified (:album/last-modified e)
+         created-at (:album/created-at e)
+         modified-by (:album/modified-by e)
+         art (:album/art e)
+         art-description (:album/art-description e)
+         associated-project (:album/project-id e)
+         tracks (-> (xt/q db '{:find [(pull ?track [:track/id :track/album-id :track/title :track/number :track/art :track/art-description])]
+                               :where [[?track :track/album-id album-id]]
+                               :in [album-id]}
+                          album-id)
+                    vec
+                    flatten
+                    vec)
+         reviews (-> (xt/q db '{:find [(pull ?review [:review/id :review/track-review :review/linked-track])]
+                                :where [[?review :review/album-id album-id]]
+                                :in [album-id]}
+                           album-id)
+                     vec
+                     flatten
+                     vec)
+         project-name (-> (xt/q db '{:find [?title]
+                                     :where [[?p :project/id associated-project]
+                                             [?p :project/title ?title]]
+                                     :in [associated-project]}
+                                associated-project)
+                          first first)]
+     (e/client
+      (dom/div
+       (dom/br)
+       (dom/span (dom/text (str "Album title: " title)))
+       (dom/br)
+       (dom/span (dom/text (str "last modified: " last-modified)))
+       (dom/br)
+       (dom/span (dom/text (str "created-at: " created-at)))
+       (dom/br)
+       (dom/span (dom/text (str "album-id: " album-id)))
+       (dom/br)
+       (dom/span (dom/text (str "Modified by: " modified-by)))
+       (dom/br)
+       (dom/span (dom/text (str "Album art: " art)))
+       (dom/br)
+       (dom/span (dom/text (str "Album art desc: " art-description)))
+       (dom/br)
+       (dom/span (dom/text (str "Project id: " associated-project)))
+       (dom/br)
+       (dom/span (dom/text (str "Project name: " project-name)))
+       (dom/br)
+       (dom/span (dom/text (str "uuid: " id)))
+       (dom/br)
+       (dom/div (dom/props {:class "track-cool"})
+                (e/server
+                 (e/for-by :track/id [{:keys [track/id track/album-id track/title track/number track/art track/art-description]} tracks]
+                           (e/client
+                            (dom/div (dom/text (str number ". " title " {:id " id "}")))))))
+
+       (dom/div (dom/props {:class "reviews-cool"})
+                (e/server
+                 (e/for-by :review/id [{:keys [review/id review/linked-track review/track-review]} reviews]
+                           (e/client
+                            (dom/div (dom/text (str id " . " linked-track " | " track-review)))))))
+
+       (InputSubmit. (str title)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :album/id (or album-id (ni))
+                                                :album/created-at (or created-at e/system-time-ms)
+                                                :album/last-modified e/system-time-ms
+                                                :album/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :album/art art
+                                                :album/art-description art-description
+                                                :album/title v}]])))))
+       (InputSubmit. (str (when (empty? art) "a r t  i m a g e") art)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :album/id (or album-id (ni))
+                                                :album/created-at (or created-at e/system-time-ms)
+                                                :album/last-modified e/system-time-ms
+                                                :album/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :album/art v
+                                                :album/art-description art-description
+                                                :album/title title}]])))))
+       (InputSubmit. (str (when (empty? art-description) "a r t d e s c r i p t i o n") art-description)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :album/id (or album-id (ni))
+                                                :album/created-at (or created-at e/system-time-ms)
+                                                :album/last-modified e/system-time-ms
+                                                :album/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :album/art art
+                                                :album/art-description v
+                                                :album/title title}]])))))
+       (InputSubmit. (str (when (empty? associated-project) "p r o j e c t   i d") associated-project)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :album/id (or album-id (ni))
+                                                :album/created-at (or created-at e/system-time-ms)
+                                                :album/last-modified e/system-time-ms
+                                                :album/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :album/art art
+                                                :album/art-description art-description
+                                                :album/project-id v
+                                                :album/title title}]])))))
+       (ui/button
+        (e/fn [] (e/client (do
+                             (update-url (str "/" current-album-id))
+                             (reset! !current-album-id album-id)
+                             (reset! !xt-id id)
+                             (reset! !view :album-with-review-inputs-page))))
+        (dom/text "Go to Album " album-id))
+       (ui/button
+        (e/fn [] (e/client (do
+                             (reset! !current-album-id album-id)
+                             (reset! !xt-id id)
+                             (reset! !view :specific-album-edit-page))))
+        (dom/text "Specific Album Edit " album-id)))))))
+
+
+(e/defn AlbumList []
+  (dom/div (dom/props {:class "album-list"})
+           (AlbumCreate.)
+           (dom/div (dom/props {:class "album-items"})
+                    (e/server
+                     (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(album-records db))]
+                               (AlbumItem. id))))))
+
+(e/defn SpecificAlbumEditPage [album-id xt-id]
+  (dom/div (dom/props {:class "album-list"})
+           (AlbumCreate.)
+           (dom/div (dom/props {:class "album-items"})
+                    (e/server
+                     (AlbumItem. album-id)))))
+
+
+
+
+
+
+
+
+
+#?(:clj
+   (defn review-queue-rating-records [db queue-id]
+     (->> (xt/q db '{:find [(pull ?r [:xt/id :rating/target :rating/created-by :rating/value])]
+                     :where [[?r :rating/target queue-id]]})
+          (map first)
+          vec)))
+
+
+;; let's add latest-additions
+
+#?(:clj
+   (defn latest-addition-album-records [db]
+     (->> (xt/q db '{:find [(pull ?a [:xt/id :album/id :album/title :album/created-at])]
+                     :where [[?a :album/id]
+                             [?a :album/created-at time]]
+                     :order-by [[time :desc]]})
+          (map first)
+          vec)))

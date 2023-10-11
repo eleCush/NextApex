@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Neon Green and Pink Lasers</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    canvas {
+      position: absolute;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    // Initialize the canvas and context
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Initialize laser positions and speed
+    let xGreen = -200;  // Starting off the page
+    let yGreen = -200;  // Starting off the page
+    let xPink = -300;   // Starting off the page
+    let yPink = -300;   // Starting off the page
+    const speed = 4;
+
+    // Update the canvas size
+    function updateCanvasSize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    // Draw and move the lasers
+    function drawLasers() {
+      // Clear the canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw the green laser
+      ctx.fillStyle = 'rgba(0, 255, 0, 1)';  // Neon Green
+      ctx.beginPath();
+      ctx.moveTo(xGreen, yGreen);
+      ctx.lineTo(xGreen + 10, yGreen - 10);
+      ctx.lineTo(xGreen + 10 + canvas.height, yGreen - 10 + canvas.height);
+      ctx.lineTo(xGreen + canvas.height, yGreen + canvas.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw the pink laser
+      ctx.fillStyle = 'rgba(255, 0, 255, 1)';  // Neon Pink
+      ctx.beginPath();
+      ctx.moveTo(xPink, yPink);
+      ctx.lineTo(xPink + 10, yPink - 10);
+      ctx.lineTo(xPink + 10 + canvas.height, yPink - 10 + canvas.height);
+      ctx.lineTo(xPink + canvas.height, yPink + canvas.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Move the lasers
+      xGreen += speed;
+      yGreen += speed;
+      xPink += speed;
+      yPink += speed;
+
+      // Reset laser positions if out of canvas
+      if (xGreen > canvas.width && yGreen > canvas.height) {
+        xGreen = -Math.random() * 200 - 100;  // Reset off the page
+        yGreen = -Math.random() * 200 - 100;  // Reset off the page
+      }
+      if (xPink > canvas.width && yPink > canvas.height) {
+        xPink = -Math.random() * 200 - 100;  // Reset off the page
+        yPink = -Math.random() * 200 - 100;  // Reset off the page
+      }
+    }
+
+    // Animation loop
+    function animate() {
+      drawLasers();
+      requestAnimationFrame(animate);
+    }
+
+    // Initialize
+    updateCanvasSize();
+    animate();
+
+    // Update on resize
+    window.addEventListener('resize', () => {
+      updateCanvasSize();
+    });
+  </script>
+</body>
+</html>

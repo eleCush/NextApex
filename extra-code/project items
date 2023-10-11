@@ -1,0 +1,88 @@
+
+(e/defn ProjectItem [id]
+  (e/server
+   (let [e (xt/entity db id)
+         project-id (:project/id e)
+         title (:project/title e)
+         last-modified (:project/last-modified e)
+         created-at (:project/created-at e)
+         modified-by (:project/modified-by e)
+         art (:project/art e)
+         art-description (:projectproject/art-description e)]
+     (e/client
+      (dom/div
+       (dom/span (dom/text (str "project title: " title)))
+       (dom/br)
+       (dom/span (dom/text (str "last modified: " last-modified)))
+       (dom/br)
+       (dom/span (dom/text (str "created-at: " created-at)))
+       (dom/br)
+       (dom/span (dom/text (str "project-id: " project-id)))
+       (dom/br)
+       (dom/span (dom/text (str "Modified by: " modified-by)))
+       (dom/br)
+       (dom/span (dom/text (str "project art: " art)))
+       (dom/br)
+       (dom/span (dom/text (str "project art desc: " art-description)))
+       (dom/br)
+       (InputSubmit. (str title)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :project/id (or project-id (ni))
+                                                :project/created-at (or created-at e/system-time-ms)
+                                                :project/last-modified e/system-time-ms
+                                                :project/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :project/art art
+                                                :project/art-description art-description
+                                                :project/title v}]])))))
+       (InputSubmit. (str art)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :project/id (or project-id (ni))
+                                                :project/created-at (or created-at e/system-time-ms)
+                                                :project/last-modified e/system-time-ms
+                                                :project/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :project/art v
+                                                :project/art-description art-description
+                                                :project/title title}]])))))
+       (InputSubmit. (str art-description)
+                     (e/fn [v]
+                       (e/server
+                        (e/discard
+                         (xt/submit-tx !xtdb [[:xtdb.api/put
+                                               {:xt/id id
+                                                :project/id (or project-id (ni))
+                                                :project/created-at (or created-at e/system-time-ms)
+                                                :project/last-modified e/system-time-ms
+                                                :project/modified-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                :project/art art
+                                                :project/art-description v
+                                                :project/title title}]]))))))))))
+
+(e/defn ProjectList []
+  (dom/div (dom/props {:class "project-list"})
+           (ProjectCreate.)
+           (dom/div {:class "project-items"}
+                    (e/server
+                     (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(project-records db))]
+                               (ProjectItem. id))))))
+
+
+(e/defn ProjectCreate []
+  (e/client
+   (InputSubmit. "Project Title"
+                 (e/fn [v]
+                   (e/server
+                    (e/discard
+                     (xt/submit-tx !xtdb [[:xtdb.api/put
+                                           {:xt/id (random-uuid)
+                                            :project/id (ni)
+                                            :project/created-at e/system-time-ms
+                                            :project/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                            :project/title v}]])))))))

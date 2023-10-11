@@ -1,0 +1,297 @@
+
+
+(e/defn TrackWithReviewInputsPage
+  "Track page with Review Inputs, for specific album by id"
+  [incoming-id xt-id]
+  (e/server
+   (let [e (xt/entity db xt-id)
+         track-id incoming-id
+         title (:album/title e)
+         last-modified (:album/last-modified e)
+         created-at (:album/created-at e)
+         modified-by (:album/modified-by e)
+         album-art (:album/art e)
+         art-description (or (:album/art-description e) "Album Art")
+         associated-project (:album/project-id e)
+
+         tracks (-> (xt/q db '{:find [number title id spotify-link]
+                               :keys [track/number track/title track/id track/spotify-link]
+                               :where [[?track :track/id id]
+                                       [?track :track/title title]
+                                       [?track :track/number number]
+                                       [?track :track/album-id incoming-id]
+                                       [?track :track/spotify-link spotify-link]]
+                               :order-by [[number :asc]]
+                               :in [incoming-id]}
+                          incoming-id)
+                    vec)
+         project-name (-> (xt/q db '{:find [?title]
+                                     :where [[?p :project/id associated-project]
+                                             [?p :project/title ?title]]
+                                     :in [associated-project]}
+                                associated-project)
+                          first first)]
+          ;;do a query for all the ratings on target (queue-id)
+
+         ;; let's take the ++, +, and - ratings and derive a "buoyancy" . +3, +1, and -2
+         ;art (:queue/art e)
+        ; art-description (:queue/art-description e) 
+     (e/client
+      (dom/div (dom/props {:class "album-page"})
+               (when album-art
+                 (dom/img (dom/props {:src (str "img/" album-art) :class "albumart" :title art-description})))
+               (dom/div (dom/props {:id "amini"})
+                   ;(dom/div (dom/props {:class "now-playing"}) (dom/text "Track -- Artist"))
+                   ;(spotify-player-component.)
+                   ;(dom/div (dom/props {:class "current-client-queue"}) (dom/text "Current Client Queue"))
+                   ;(dom/iframe (dom/props {:src "https://open.spotify.com/embed/track/4EjAOCDDH0DmZ0FdeCQyvT"}))
+                        (dom/div (dom/props {:class "browsing-now"})
+                                 (dom/img (dom/props {:src (str "img/" album-art) :class "albumartmini" :title art-description}))
+                                 (dom/div (dom/props {:class "nbt"})
+                                          (dom/div (dom/props {:class "amini-album-name"}) (dom/text title))
+                                          (dom/div (dom/props {:class "amini-project-name"}) (dom/text project-name))
+                                          (dom/div (dom/props {:class "nbtext"}) (dom/text "Now Browsing")))))
+               (dom/br)
+               (dom/div (dom/props {:class "albumtitle"}) (dom/text title))
+               (dom/div (dom/props {:class "albumartist"}) (dom/text project-name))
+               (dom/br)
+               (dom/div (dom/props {:class "attr"}) (dom/text (str "REMEWS album-id: " incoming-id)))
+               (dom/br)
+
+               (dom/span (dom/props {:class "teckst"}) (dom/text (str "Album art: " art)))
+               (dom/br)
+               (dom/span (dom/props {:class "teckst"}) (dom/text (str "Album Title: " title)))
+               (dom/br)
+               (dom/span (dom/props {:class "teckst"}) (dom/text (str "Associated Artist: " project-name)))
+               (dom/br)
+               (dom/div (dom/props {:class "cm"}) (dom/text cm))
+
+               (dom/div (dom/props {:class "track-cool"})
+                        (e/server
+                         (e/for-by :track/id [{:keys [track/id track/album-id track/title track/number track/spotify-link track/art]} tracks]
+                                   (let [track-id id
+                                         ratings (-> (xt/q db '{:find [?xt-id ?rating-target ?rating-value ?created-by ?rating-value]
+                                                                :where [[?r :xt/id ?xt-id]
+                                                                        [?r :rating/value ?rating-value]
+                                                                        [?r :rating/target ?rating-target]
+                                                                        [?r :rating/created-by ?created-by]]
+                                                                :in [?rating-target]}
+                                                           id)) ;;id is the track-id is the rating-target
+
+
+                                         ratings-by-this-user (-> (xt/q db '{:find [[?rating-xt-id ?rating-id ?rating-target ?rating-value ?rating-value]]
+                                                                             :where [[?r :xt/id ?rating-xt-id]
+                                                                                     [?r :rating/id ?rating-id]
+                                                                                     [?r :rating/value ?rating-value]
+                                                                                     [?r :rating/target ?rating-target]
+                                                                                     [?r :rating/created-by ?created-by]]
+                                                                             :in [?rating-target ?created-by]}
+                                                                        id (get-in e/*http-request* [:cookies "remewserid" :value])) ;;id is the track-id is the rating-target, created-by is this get-in (2 arguments on this line)
+                                                                  first first)
+                                         rating-xt-id (first ratings-by-this-user)
+                                         rating-id (second ratings-by-this-user)
+                                         rrz (into [] ratings)
+                                         rating-count (count rrz)
+                                         rating-score (-> (reduce +
+                                                                  (map (fn [sub-vec]
+                                                                         (cond (= (nth sub-vec 2) :doubleplus) 99
+                                                                               (= (nth sub-vec 2) :plus) 71
+                                                                               (= (nth sub-vec 2) :minus) 31
+                                                                               :else 0)) rrz))
+                                                          (/ (if (= 0 rating-count) 1 rating-count))
+                                                          (int))
+                     ;album-reviews (-> (xt/q db '{:find [(pull ?review [:review/id :review/track-id :review/track-review :review/album-id :review/created-at :review/created-by])]
+                     ;                             :where [[?review :review/album-id incoming-id]]
+                     ;                             :in [incoming-id]}
+                     ;                        incoming-id)
+                     ;                  vec
+                     ;                  flatten
+                     ;                  vec)
+                     ;track-reviews (->> (xt/q db '{:find [track-id track-review]
+                     ;                             :where [;[?r :review/id ?review-id]
+                     ;                                     [?r :review/track-id track-id]
+                     ;                                     [?r :review/track-review track-review]
+                     ;                                     ;[?r :review/album-id ?review-album-id]
+                     ;                                     ;[?r :xt/id ?review-xt-id]
+                     ;                                     ]
+                     ;                             :in [track-id]}
+                     ;                        track-id)
+                     ;                        (map second)
+                     ;                        vec)
+                                         track-reviews (->> (xt/q db '{:find [(pull ?review [:xt/id :review/id :review/track-id :review/track-review :review/created-at :review/created-by])]
+                                                                       :where [[?review :review/track-id track-id]]
+                                                                       :in [track-id]}
+                                                                  track-id)
+                                                            (map first)
+                                                            vec)]
+                                     (e/client
+                                      (dom/div (dom/props {:class "tl"})
+                   ;(dom/div (dom/text (count ratings)))
+                                               (dom/div (dom/props {:class "qirline"})
+                                                        (dom/div (dom/props {:class "trackline"}) (dom/text (str number ". " title))) ;id
+                                                        ;(SpotButan. spotify-link project-name title)
+                                                        (dom/div (dom/props {:class "rc"})
+                                                                 (dom/div (dom/props {:class "rcrc"})
+                                                                          (when (not (= 0 rating-score)) (dom/text rating-score)))
+                                                                 (dom/div (dom/props {:class "ratecontain"})
+                                                                          (ui/button
+                                                                           (e/fn []
+                                                                             (e/server
+                                                                              (if (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value])))
+                                                                                (e/discard
+                                                                                 (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                                                       {:xt/id (or rating-xt-id (random-uuid))
+                                                                                                        :rating/id (or rating-id (nir))
+                                                                                                        :rating/created-at e/system-time-ms
+                                                                                                        :rating/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                                                        :rating/target id
+                                                                                                        :rating/value :doubleplus}]]))
+                                                                                (e/client (reset! client-message "Must have musician membership to select ratings for tracks.")))))
+                                                                           (dom/props {:class "dblp b"})
+                                                                           (dom/text "++")))
+                                                                 (dom/div (dom/props {:class "ratecontain"})
+                                                                          (ui/button
+                                                                           (e/fn []
+                                                                             (e/server
+                                                                              (if (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value])))
+                                                                                (e/discard
+                                                                                 (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                                                       {:xt/id (or rating-xt-id (random-uuid))
+                                                                                                        :rating/id (or rating-id (nir))
+                                                                                                        :rating/created-at e/system-time-ms
+                                                                                                        :rating/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                                                        :rating/target id
+                                                                                                        :rating/value :plus}]]))
+                                                                                (e/client (reset! client-message "Must have musician membership to select ratings for tracks.")))))
+                                                                           (dom/props {:class "sngp b"})
+                                                                           (dom/text "+")))
+                                                                 (dom/div (dom/props {:class "ratecontain"})
+                                                                          (ui/button
+                                                                           (e/fn []
+                                                                             (e/server
+                                                                              (if (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value])))
+                                                                                (e/discard
+                                                                                 (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                                                       {:xt/id (or rating-xt-id (random-uuid))
+                                                                                                        :rating/id (or rating-id (nir))
+                                                                                                        :rating/created-at e/system-time-ms
+                                                                                                        :rating/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                                                        :rating/target id
+                                                                                                        :rating/value :minus}]]))
+                                                                                (e/client (reset! client-message "Must have musician membership to select ratings for tracks.")))))
+                                                                           (dom/props {:class "sngn b"})
+                                                                           (dom/text "-"))))
+                                                        (dom/div (dom/props {:class "review-cool"})
+                                                                 (e/server
+                                                                  (e/for-by :review/review-id [{:keys [xt/id review/review-id review/track-id review/track-review review/created-at review/created-by]} track-reviews]
+                                                                            (let [ratings (-> (xt/q db '{:find [?xt-id ?rating-target ?rating-value ?created-by ?rating-value]
+                                                                                                         :where [[?r :xt/id ?xt-id]
+                                                                                                                 [?r :rating/value ?rating-value]
+                                                                                                                 [?r :rating/target ?rating-target]
+                                                                                                                 [?r :rating/created-by ?created-by]]
+                                                                                                         :in [?rating-target]}
+                                                                                                    id)) ;;id is the review-id (is the uuid which is :xt/id) is the rating-target
+
+
+                                                                                  ratings-by-this-user (-> (xt/q db '{:find [[?rating-xt-id ?rating-id ?rating-target ?rating-value ?rating-value]]
+                                                                                                                      :where [[?r :xt/id ?rating-xt-id]
+                                                                                                                              [?r :rating/id ?rating-id]
+                                                                                                                              [?r :rating/value ?rating-value]
+                                                                                                                              [?r :rating/target ?rating-target]
+                                                                                                                              [?r :rating/created-by ?created-by]]
+                                                                                                                      :in [?rating-target ?created-by]}
+                                                                                                                 id (get-in e/*http-request* [:cookies "remewserid" :value])) ;;id is the review-id is the rating-target, created-by is this get-in (2 arguments on this line) ;;great note
+                                                                                                           first first)
+                                                                                  rating-xt-id (first ratings-by-this-user)
+                                                                                  rating-id (second ratings-by-this-user)
+                                                                                  rrz (into [] ratings)
+                                                                                  rating-count (count rrz)
+                                                                                  review-rating-score (-> (reduce +
+                                                                                                                  (map (fn [sub-vec]
+                                                                                                                         (cond (= (nth sub-vec 2) :doubleplus) 99
+                                                                                                                               (= (nth sub-vec 2) :plus) 71
+                                                                                                                               (= (nth sub-vec 2) :minus) 31
+                                                                                                                               :else 0)) rrz))
+                                                                                                          (/ (if (= 0 rating-count) 1 rating-count))
+                                                                                                          (int))]
+                                                                              (e/client
+                                                                               (dom/div (dom/props {:class "review-cool-elem"})
+                                                                                        (dom/div (dom/props {:class "rmwsrvid"}) (dom/text (e/server (when (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value]))) id))))
+                              ;(dom/div (dom/props {:class "track-id"}) (dom/text track-id))
+                              ;(dom/div (dom/props {:class "created-at"}) (dom/text created-at))
+                              ;(dom/div (dom/props {:class "created-by"}) (dom/text created-by))
+                                                                                        (dom/div (dom/props {:class "track-review"})
+                                                                                                 (dom/div (dom/props {:class "track-review-content"}) (dom/text track-review))
+                                                                                                 (dom/div (dom/props {:class "track-review-rating"})
+                                                                                                          (dom/div (dom/props {:class "track-rating-butans"})
+                                                                                                                   (dom/div (dom/props {:class "rrcc"})
+                                                                                                                            (dom/div (dom/props {:class "rrccrrcc"})
+                                                                                                                                     (when (not (= 0 review-rating-score)) (dom/text review-rating-score)))
+                                                                                                                            (dom/div (dom/props {:class "ratecontain"})
+                                                                                                                                     (ui/button
+                                                                                                                                      (e/fn []
+                                                                                                                                        (e/server
+                                                                                                                                         (if (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value])))
+                                                                                                                                           (e/discard
+                                                                                                                                            (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                                                                                                                  {:xt/id (or rating-xt-id (random-uuid))
+                                                                                                                                                                   :rating/id (or rating-id (nir))
+                                                                                                                                                                   :rating/created-at e/system-time-ms
+                                                                                                                                                                   :rating/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                                                                                                                   :rating/target id
+                                                                                                                                                                   :rating/value :doubleplus}]]))
+                                                                                                                                           (e/client (reset! client-message "Must have musician membership to select ratings for reviews.")))))
+                                                                                                                                      (dom/props {:class "dblp bbmini"})
+                                                                                                                                      (dom/text "++")))
+                                                                                                                            (dom/div (dom/props {:class "ratecontain"})
+                                                                                                                                     (ui/button
+                                                                                                                                      (e/fn []
+                                                                                                                                        (e/server
+                                                                                                                                         (if (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value])))
+                                                                                                                                           (e/discard
+                                                                                                                                            (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                                                                                                                  {:xt/id (or rating-xt-id (random-uuid))
+                                                                                                                                                                   :rating/id (or rating-id (nir))
+                                                                                                                                                                   :rating/created-at e/system-time-ms
+                                                                                                                                                                   :rating/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                                                                                                                   :rating/target id
+                                                                                                                                                                   :rating/value :plus}]]))
+                                                                                                                                           (e/client (reset! client-message "Must have musician membership to select ratings for reviews.")))))
+                                                                                                                                      (dom/props {:class "sngp bbmini"})
+                                                                                                                                      (dom/text "+")))
+                                                                                                                            (dom/div (dom/props {:class "ratecontain"})
+                                                                                                                                     (ui/button
+                                                                                                                                      (e/fn []
+                                                                                                                                        (e/server
+                                                                                                                                         (if (not (nil? (get-in e/*http-request* [:cookies "remewserid" :value])))
+                                                                                                                                           (e/discard
+                                                                                                                                            (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                                                                                                                  {:xt/id (or rating-xt-id (random-uuid))
+                                                                                                                                                                   :rating/id (or rating-id (nir))
+                                                                                                                                                                   :rating/created-at e/system-time-ms
+                                                                                                                                                                   :rating/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                                                                                                                   :rating/target id
+                                                                                                                                                                   :rating/value :minus}]]))
+                                                                                                                                           (e/client (reset! client-message "Must have musician membership to select ratings for reviews.")))))
+                                                                                                                                      (dom/props {:class "sngn bbmini"})
+                                                                                                                                      (dom/text "-"))))))))))))
+                                                                 (dom/span (dom/text (str "")) ;id " | " title " | " rating-id " | " rating-xt-id " | " rating-score))
+                                                                           (dom/span (dom/props {:class "rax"}) (dom/text (str "")))))
+                                                        (dom/div (dom/props {:class "tri"})
+                                                                 (InputSubmit. "track review / music words"
+                                                                               (e/fn [v]
+                                                                                 (e/server
+                                                                                  (e/discard
+                                                                                   (xt/submit-tx !xtdb [[:xtdb.api/put
+                                                                                                         {:xt/id (random-uuid)
+                                                                                                          :review/album-id incoming-id
+                                                                                                          :review/review-id (ni)
+                                                                                                          :review/created-at e/system-time-ms
+                                                                                                          :review/created-by (get-in e/*http-request* [:cookies "remewserid" :value])
+                                                                                                          :review/track-id id
+                                                                                                          :review/track-review v}]])))))))))))))
+
+
+               (dom/div (dom/props {:class "cm"}) (dom/text cm)))))))
+
+

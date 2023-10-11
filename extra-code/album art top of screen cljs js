@@ -1,0 +1,17 @@
+#?(:cljs (defn saa! []
+           (if-let [mini (js/document.getElementById "amini")]
+             (if (> (.-pageYOffset js/window) 799)
+               (do
+                 (set! (.-style.position mini) "fixed")
+                 (set! (.-style.top mini) "0")
+                 (set! (.-style.opacity mini) "1")
+                 (set! (.-style.display mini) "block")
+                 (set! (.-style.visibility mini) "visible"))
+                ;(.log js/console (.-pageYOffset js/window))
+
+               (do (set! (.-style.position mini) "fixed")
+                   (set! (.-style.opacity mini) "0")
+                   (set! (.-style.visibility mini) "hidden"))))))
+
+#?(:cljs (defn ^:export init [] (goog.events/listen js/window "scroll" saa!)))
+#?(:cljs (init))

@@ -1,0 +1,271 @@
+11 June 2023
+	Spotify Linkage
+		https://accounts.spotify.com/en/authorize?client_id=b5dcaa1cb9684d829fe593ea3aed652b&response_type=code&redirect_uri=https://remews/spotify-auth&state=some_state&scope=streaming
+
+
+https://accounts.spotify.com/en/authorize?client_id=b5dcaa1cb9684d829fe593ea3aed652b&response_type=code&redirect_uri=http://localhost:8080/&state=some_state&scope=streaming
+
+
+		https://remews/spotify-auth?code=AQBL8b5UZnEWE6h1gWg0fJO4oHlUEuTkdX61YFjpB7zAGs33X2wIQmaJkQPc8cZBkTeyPnwEuJLlZ_LJSA8548tCA_k1unGtMhvqVUwjqHcTknEYuQXaU3GOuviMPsU8tXYITkE9Rt35pFXfC0YVhXQhpfUmBR9lA8Cr0TsXwTRQYp7IUsY7iHHY&state=some_state (valid for 1 Hr)
+
+
+
+
+;;spotify ideas
+
+#?(:cljs (defonce spotify-player (atom nil)))
+
+#?(:cljs (defn init-spotify-player [token]
+  (let [player (js/Spotify.Player. (clj->js {:name "My Player" :getOAuthToken (fn [cb] (cb token))}))]
+    (-> player .connect (.then (fn [_] (reset! spotify-player player)))))))
+
+#?(:cljs (defn play-track [track-uri]
+  (when-let [player @spotify-player]
+    (.play player (clj->js {:uris [track-uri]})))))
+
+(e/defn spotify-player-component []
+  (let [track-uri "spotify:track:3PbSEuaqKO3WGP4bTgRJoO" 
+        remews-spotify-client-id "b5dcaa1cb9684d829fe593ea3aed652b"
+        oauth-token-for-spotify-user "AQCm3bTRkee3EIL4WA_DDtliRht2e4FxG09kAvgrqbm4H9ve4Wwl_r5vxRkmviepBycdGtVYPXAA8hH0bCe1eWfKWBZ0jXL7d_HihyLge2nNOvHNbXHuH2m2pPyWeEkIxYqYGMFAf9z63rkthSgG375oTzlj1jLFDVLU6RUOVYxh03j35enpWVne"]
+    (dom/div
+      (ui/button 
+              (e/fn [] (e/client #(play-track track-uri)))
+              (dom/text "Play track")
+      ))))
+
+
+#?(:cljs (defn ^:export onSpotifyWebPlaybackSDKReady []
+           (let []
+  ;; you can put some logic here, like initializing the player
+  (println "Spotify SDK is ready")
+  (init-spotify-player "AQCEr2qvFS3RGVrvX6UE-d8NwcLX-XC1DHwedvzO0CWwQZQ9DcGM4JR2GpPCTEv6oQ38qo2KfQ6wlU2RI4ueghOyimL4kojT2ZWKQVCr_0hQFfwpNflp3UvWOCbkQOASQrsa7JNtHHtUQzKoQHoZRJTmKy7J_tUaMFBU2QXDDGeFb8R27A")
+  )))
+
+#?(:cljs (set! (.-onSpotifyWebPlaybackSDKReady js/window) onSpotifyWebPlaybackSDKReady))
+
+
+
+9 June 2023
+
+	spark post / email confirm after the stripe billing process -> webhook, or check e-mail w/ stripe on login
+
+	||
+	||
+	||
+
+	add footer "careers" "products" "about" "contact" 
+
+7 June 2023
+
+	User Profile page? prolly
+	link to "simplified billing"
+
+
+ Get a pro account to write reviews and skip the queue.  Pro accounts will be available later.
+
+
+
+
+NOTES EXTRACT :: 7 JUNE 2023
+
+;; rating-ids are the ratings you made
+;; ratings are the ratings given to you by others
+
+
+;next to add users, who have types (musician, listener, merch-maker), public profile page, and optional billing
+
+
+
+;; reviews above are per-track.  can do per-album one where the track field is blank..  might do that.  
+
+
+;;published-at
+;;consider "published-at" date for releasing thingks and then also having them show up in the feed
+;;revisits 
+;;consider revisits
+
+;okay how many steps away from complete: probably user profile pages, ability to make ratings & make reviews.  so maybe stick up some sample album & art.
+
+;;consider adding clips
+
+;; consider adding posts, which link to other things.  kinda like reviews but with multiple potential content associations. [embeds]
+
+
+
+
+
+
+          ;; 12 may 2023 thinking to make it per-
+          ;; track reviews
+          ;; overall album impression or 
+
+
+					;;DONE// add input boxen for 
+					;; review track
+					;; review contents .. should it be an array of paragraphs?
+
+
+
+6 june 2023:
+
+add the album art preview and album name and project name to the top bar and have it fixed position on scroll
+
+4 June 2023: build an album list up from the several tracks that you start with so they all get the same album metadata []
+
+[] for each track in AlbumReviewWithReviewInputPage (xD) draw an input box.
+
+
+
+2 June 2023, 9:51p
+REMEWS looks very enticing.  I am actually looking forward to adding content as soon as I stratify the admin/normie views
+
+
+
+
+2 June2023
+
+
+Join Butan -> stripe -> 
+										 -> logins can check stripe db for existancez
+
+limit the number of latest additons on main page (add butan to go to tab)
+
+
+30 May 2023
+
+	to add: Latest Additions Page
+
+		  		- latest additions page ought feature latest album adds and latest track adds and latest review adds
+
+				"newly added to the database"
+
+				"newly reviewed" -- i guess these are quivalents
+
+			
+
+	:track/created-at not populated on TrackCreate action, please investigate
+
+
+
+27 May 2023
+
+
+Help me make remews the best it can be
+
+
+26 May 2023
+
+	mint a "ReviewQueuePage" and "LatestAdditionsPage" and "JoinPage"
+
+26 May 2023 19:51 
+	"Review Queue" 
+	"Latest Additions"
+	"What it is"
+	"Join"
+	"About"
+
+
+25 May 2023
+	Let's add>>> UI lockdown for rating buttons unless remewserid set
+
+
+24 May 2023
+	nonforum font w/ dice !!!11181818181818
+
+
+	for < 3 ratings on a piece (?)
+	
+
+
+
+23 may 14:24:36
+
+Ratings now upsert over the old rating id.  This means each user will have one rating per: reviewQueue item
+
+To implement the same (overwrite if ID present) for track-ratings, clip-ratings, review-ratings
+
+
+23 May 12:11 PM
+
+rating blocks on review queue should be functional bits
+
+also, login conditional the create blocks of the page, whilst displaying the other real-timey stuff.
+so, in short: sockets for all!  just not logins for all x)
+
+
+
+20 May 2023 : 12:32AM
+
+Got the rating scaffolding really close.  Now gonna add click events which tie user to the ratings & rewrite in on click.
+
+Then gotta do the query for the score, which will be:
+
+sum up the doubleplus ratings vector on the item [the rating-id is saved, and if inspected, will show who rated it]
+sum up the plus ratings vec
+sum up the min ratings vec
+then show the aggregate score (check out nonforum cljs or rating code on githoob)
+
+
+next steps: once I have ratings going, I will add rating mechanisms to tracks, to reviews (on tracks and albums), and maybe before those 2 I will do review queue.  cuz that is big and the whole point, really.
+
+
+19 May 2023 latr
+
+Looking really good.
+
+The roadmap to sellable something:
+
+  1. Finish Basic Interface for 
+  		A. Album Art & Display Album Single One
+  		B. Track Art & Display Track Single One
+  		C. Track w/ Review
+  		D. Album w/ Review
+  		DD. Review Queue
+  	
+
+  		E. Then, user logins?
+  		G. Tie user logins to all the things
+  		H. Add billing via Stripe & 
+  		I. Integrate subscription adjustment page "simplified billing"
+  		J. Sell
+   2. Continue building site to perfection.
+
+   3. For example, consider mobile experience.
+
+   4. Add static pages via the http helper.clj -- might have to make all new components?  Or, just render the text. :think:
+
+   5. I want people joining it TODAY and paying NOW so how to accomplish THAT:
+
+   			Landing page
+
+   			Pre-sale page w/ Explanation & screenshots?
+
+   			I think once I get the basic review queue up and show people the site it'll be interesting
+
+   			Maybe I can set it up this way:
+
+   			Read-only first, just my posts & stuff
+
+   			Then: if you pay you can join (don't need no cell number i reckon)
+
+   			Finally, if you want to vote on stuff you can join for free with a cell number.
+
+
+
+   RN: packaging Ratings like a tab on the side side
+
+
+
+   Ratings: 
+
+   	CReate the postage stamp that is 3 ui buttons 
+
+
+
+19 May 2023
+save track numbers as NUMBERS not STRANGS x) lol
+
+
+
+notes-todo
+

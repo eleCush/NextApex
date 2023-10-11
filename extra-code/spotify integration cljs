@@ -1,0 +1,93 @@
+
+;;working spotify inclusion
+;; just dont' rip anythan outta todo_list.cljc that ref spot
+
+#?(:cljs (def device-id (atom nil)))
+
+#?(:cljs (defn get-token []
+  ; TODO: implement a secure method to get the OAuth token
+           "BQAbFaqrbF0Qng9QoJ3L2B1ZFimJ3PvzMDYrVw-_MKc-G-lFstfydfk7NnI59SalOhd7MnKTg_Nu4GAU0jNwpOOkuaf-22mkonfUng3TRgo7mzrngVY4ljfaIcbi8vqZFkkYj8U1o8vmq-rWtzgRUTbLPv__m1GhBmOoOaGTMbYI6_JyZh5_8sQ-z7LM4Gc-byOoVhzukrb9GLQZXaqKZrr9aAfpLb8T"))
+
+#?(:cljs (defn play [spotify_uri]
+           (PUT (str "https://api.spotify.com/v1/me/player/play?device_id=" @device-id)
+             {:with-credentials? false
+              :headers {"Authorization" (str "Bearer " (get-token))
+                        "Content-Type" "application/json"
+                        "Accept" "application/json"}
+              :query-params {"device_id" @device-id}
+              :body (js/JSON.stringify (clj->js {:uris [spotify_uri]}))
+              :handler (fn [response]
+                         (.log js/console "Playback started"))
+              :error-handler (fn [response]
+                               (.log js/console "Error in playback"))})))
+
+#?(:cljs (defn pause []
+           (PUT (str "https://api.spotify.com/v1/me/player/pause?device_id=" @device-id)
+             {:with-credentials? false
+              :headers {"Authorization" (str "Bearer " (get-token))
+                        "Content-Type" "application/json"
+                        "Accept" "application/json"}
+              :query-params {"device_id" @device-id}
+    ; :body (js/JSON.stringify (clj->js {:uris [spotify_uri]}))
+              :handler (fn [response]
+                         (.log js/console "Push Pausa"))
+              :error-handler (fn [response]
+                               (.log js/console "Erra pausin ;x"))})))
+
+#?(:cljs (defn resume [spotify_uri]
+           (PUT (str "https://api.spotify.com/v1/me/player/play?device_id=" @device-id)
+             {:with-credentials? false
+              :headers {"Authorization" (str "Bearer " (get-token))
+                        "Content-Type" "application/json"
+                        "Accept" "application/json"}
+              :query-params {"device_id" @device-id}
+              :body ""; (js/JSON.stringify (clj->js {:uris [spotify_uri]}))
+              :handler (fn [response]
+                         (.log js/console "Playback resumin'"))
+              :error-handler (fn [response]
+                               (.log js/console "Error in remusin' x)"))})))
+
+#?(:cljs (defn on-spotify-web-playback-sdk-ready []
+           (let [player (js/Spotify.Player. (clj->js {:name "REMEWS Web Lasers"
+                                                      :getOAuthToken (fn [cb] (cb (get-token)))
+                                                      :volume 0.5}))]
+             (.addListener player "ready" (fn [in] ;{:keys [device_id]} :as
+                                            (let [jin (js->clj in :keywordize-keys true)]
+                                              (reset! device-id (get-in jin [:device_id]))
+                                              (.log js/console "!#: " in)
+                                              (.log js/console "!#: " @device-id)
+                                              (.log js/console "!#: " jin))))
+    ;(.addListener player "not_ready" on-not-ready)
+    ;(.addListener player "initialization_error" on-initialization-error)
+    ;(.addListener player "authentication_error" on-authentication-error)
+    ;(.addListener player "account_error" on-account-error)
+             (.connect player))))
+
+(e/defn SpotButan [track-uri project-name track-name]
+  (e/client
+   (dom/div
+    (ui/button (e/fn [] (e/client (play (str "spotify:track:" track-uri)))) (dom/props {:class "toggle-play"}) (dom/text (str project-name ": " track-name " 🎶")))
+    (ui/button (e/fn [] (e/client (pause))) (dom/props {:class "toggle-play"}) (dom/text (str "⏸")))
+    (ui/button (e/fn [] (e/client (resume))) (dom/props {:class "toggle-play"}) (dom/text (str "⏵"))))))
+
+
+;;add to ui button
+#?(:cljs (defn get-spotify-authorization []
+           (let [client-id "b5dcaa1cb9684d829fe593ea3aed652b"
+                 redirect-uri (js/encodeURIComponent "https://remews.com/spotify-auth")
+                 scopes (js/encodeURIComponent "user-read-private user-read-email ")
+                 auth-url (str "https://accounts.spotify.com/authorize?client_id=" client-id "&response_type=code&redirect_uri=" redirect-uri "&scope=" scopes)]
+             (.open js/window auth-url "_blank"))))
+
+#?(:cljs (def base64cidsec "YjVkY2FhMWNiOTY4NGQ4MjlmZTU5M2VhM2FlZDY1MmI6NGRjYjhmMzNjMGMxNDJhMjgwZDc1YmRkMmJmNjQ4MzI="))
+
+#?(:cljs (defn !get-token []
+           (POST "https://accounts.spotify.com/api/token"
+             {:headers {"Authorization" "Basic ZjM4ZjAw...WY0MzE="}
+              :params {:grant_type "authorization_code"
+                       :code "Qcb0Orv1zh30vL1MPRsbmJYtECYzz3DcJhn7QfWzwgk"
+                       :redirect_uri "https%3A%2F%2Fwww.example.com%2Fcallback"}
+              :handler (fn [response]
+                         (println "Response received" response))
+              :error-handler (fn [response]
+                               (println "Error in request" response))})))

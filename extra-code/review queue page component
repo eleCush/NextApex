@@ -1,0 +1,27 @@
+(e/defn ReviewQueuePage []
+  (e/client
+   (dom/div (dom/props {:class "rqp"})
+;   (dom/h3 (dom/text "REMEWS: listening parties album reviews"))
+            (dom/div (dom/props {:class "crq"})
+                     (dom/text "Current Review Queue"))
+            (ui/button
+             (e/fn [] (e/client (do
+                                  (reset! client-message "You must be logged in to add to the review queue."))))
+             (dom/props {:class "a2rqmini"})
+             (dom/text "+"))
+            (ReviewQueue.)
+            ;(ui/button
+            ; (e/fn [] (e/client (do (reset! client-message "You must be logged in to add to the review queue."))))
+            ; (dom/props {:class "a2rq"})
+            ; (dom/text "Add to Review Queue"))
+            (dom/div (dom/props {:class "cm"}) (dom/text cm)))))
+
+(e/defn ReviewQueue []
+  (e/client
+   (dom/div
+    (dom/props {:class "queue-list"})
+    (dom/div
+     (dom/props {:class "queue-items"})
+     (e/server
+      (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(review-queue-records db))]
+                (QueueItem. id)))))))
