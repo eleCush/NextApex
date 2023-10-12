@@ -172,7 +172,7 @@
                                      (reset! loginn-str (.-value dom/node) ))))
   (ui/button (e/fn [v]
               (e/server
-                (e/client (.log js/console (e/watch login-str)))
+                (e/client (.log js/console (e/watch login-str) " | " (e/watch loginn-str)))
               
               ;; ajax call here for login
 
