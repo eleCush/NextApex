@@ -133,7 +133,8 @@
 
 (e/defn TodoCreate []
   (e/client
-    (InputSubmit. "create todo" (e/fn [v]
+    (InputSubmit. "create todo" 
+                  (e/fn [v]
                     (e/server
                       (e/discard
                         (e/offload
@@ -158,7 +159,52 @@
                        :where [[?e :task/status ?status]]}
               :active))))
 
-(comment (todo-count user/db))
+(def login-str (atom ""))
+(def loginn-str (atom ""))
+
+(e/defn LoginPart []
+ (e/client
+  (dom/input (dom/props {:placeholder "username"})
+                 (dom/on "change" (e/fn [e]
+                                     (reset! login-str (.-value dom/node) ))))
+  (dom/input (dom/props {:placeholder "password" :type "password"})
+                 (dom/on "change" (e/fn [e]
+                                     (reset! loginn-str (.-value dom/node) ))))
+  (ui/button (e/fn [v]
+              (e/server
+                (e/client (.log js/console (e/watch login-str)))
+              
+              ;; ajax call here for login
+
+              ;  (e/discard
+              ;    (e/offload
+              ;      #(xt/submit-tx !xtdb [[:xtdb.api/put
+              ;                              {:xt/id (random-uuid)
+              ;                              :task/description v
+              ;                              :task/status :active}]])))
+              ))
+               (dom/text "Click to Login"))))
+
+(e/defn CreateAccountPart []
+ (e/client
+  (dom/input (dom/props {:placeholder "username"})
+                 (dom/on "change" (e/fn [e]
+                                     (reset! login-str (.-value dom/node) ))))
+  (dom/input (dom/props {:placeholder "password" :type "password"})
+                 (dom/on "change" (e/fn [e]
+                                     (reset! loginn-str (.-value dom/node) ))))
+  (ui/button (e/fn [v]
+              (e/server
+                (e/client (.log js/console (e/watch login-str)))
+              
+              ;  (e/discard
+              ;    (e/offload
+              ;      #(xt/submit-tx !xtdb [[:xtdb.api/put
+              ;                              {:xt/id (random-uuid)
+              ;                              :task/description v
+              ;                              :task/status :active}]])))
+              ))
+               (dom/text "Create Account"))))
 
 (e/defn Todo-list []
   (e/server
@@ -174,12 +220,25 @@
             (e/server
               (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(todo-records db))]
                 (TodoItem. id))))
+          (Chat-UI.)
+          (dom/hr)
+          (LoginPart.)
+          (dom/hr)
+          (CreateAccountPart.)
           (dom/p (dom/props {:class "counter"})
             (dom/span (dom/props {:class "count"})
               (dom/text (e/server (e/offload #(todo-count db)))))
             (dom/text " items left")))))))
 
+;;userList
+;;itemsList
+;;tribesList
+;;feedbackList
+;;featureList
 
+;;createAccount [o]
+;;login [o]
+;;
 
 
 
