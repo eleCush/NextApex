@@ -237,6 +237,10 @@
         (dom/div (dom/props {:class "tribelistc fc"})
           (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
         (TribeCreate.)
+        (dom/hr)
+        (dom/div (dom/props {:class "feedbacklistc fc"})
+          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
+        (FeedbackCreate.)
 
         (dom/hr)
         (Chat-UI. "placeholder-username")
@@ -307,11 +311,11 @@
         (dom/div (dom/props {:class "newsitem fi"})
           (dom/div (dom/props {:class "fr"})
             (dom/div (dom/props {:class "fi"})
-             (dom/text author))
+             (dom/text creator))
             (dom/div (dom/props {:class "fi"})
-             (dom/text item-id))
+             (dom/text tribe-id))
             (dom/div (dom/props {:class "fi"})
-             (dom/text item-minted-at))
+             (dom/text tribe-minted-at))
             (dom/div (dom/props {:class "fi"})
              (dom/text link))
             (dom/div (dom/props {:class "fi"})
@@ -335,6 +339,45 @@
        (sort-by :tribe/minted-at)
        vec)))
 
+(e/defn FeedbackItem [id]
+  (e/server
+    (let [e (xt/entity db id)
+          xt-id   (:xt/id e)
+          minted-by (:feedback/minted-by e)
+          feedback-minted-at (:feedback/minted-at e)
+          link (:feedback/link e)
+          mood (:feedback/mood e)
+          desc (:feedback/desc e)
+          ] 
+      (e/client
+        (dom/div (dom/props {:class "newsitem fi"})
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+             (dom/text mood))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text desc))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text feedback-minted-at))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text minted-by))))))))
+
+(e/defn FeedbackCreate [] (e/client (InputSubmit. "feedback desc"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+  [[:xtdb.api/put
+    {:xt/id (random-uuid)
+    :feedback/desc v
+    :feedback/id (nid)
+    :feedback/author "logged-in-user"
+    :feedback/mood "current-mood"
+    :feedback/minted-at (System/currentTimeMillis)}]]))))))))
+
+#?(:clj
+   (defn feedback-records [db]
+     (->> (xt/q db '{:find [(pull ?fb [:xt/id :feedback/desc :feedback/minted-by :feedback/id :feedback/minted-at])]
+                     :where [[?fb :feedback/id]]})
+       (map first)
+       (sort-by :feedback/minted-at)
+       vec)))
+
 
 
 
@@ -345,7 +388,7 @@
 
 ;;userList [oo   ]
 ;;itemsList [oo ]
-;;tribesList [ ]
+;;tribesList [oo  ]
 ;;feedbackList [ ]
 ;;featureList [ ]
 
