@@ -241,6 +241,10 @@
         (dom/div (dom/props {:class "feedbacklistc fc"})
           (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
         (FeedbackCreate.)
+        (dom/hr)
+        (dom/div (dom/props {:class "featurerequestlistc fc"})
+          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
+        (FeatureRequestCreate.)
 
         (dom/hr)
         (Chat-UI. "placeholder-username")
@@ -378,10 +382,44 @@
        (sort-by :feedback/minted-at)
        vec)))
 
+(e/defn FeatureRequestItem [id]
+  (e/server
+    (let [e (xt/entity db id)
+          xt-id   (:xt/id e)
+          minted-by (:feedback/minted-by e)
+          feature-request-minted-at (:feature-request/minted-at e)
+          link (:feature-request/link e)
+          mood (:feature-request/mood e)
+          desc (:feature-request/desc e)
+          ] 
+      (e/client
+        (dom/div (dom/props {:class "newsitem fi"})
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+             (dom/text mood))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text desc))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text feature-request-minted-at))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text minted-by))))))))
 
+(e/defn FeatureRequestCreate [] (e/client (InputSubmit. "Feature Request"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+  [[:xtdb.api/put
+    {:xt/id (random-uuid)
+    :feature-request/desc v
+    :feature-request/id (nid)
+    :feature-request/author "logged-in-user"
+    :feature-request/mood "current-mood"
+    :feature-request/minted-at (System/currentTimeMillis)}]]))))))))
 
-
-
+#?(:clj
+   (defn feature-request-records [db]
+     (->> (xt/q db '{:find [(pull ?frq [:xt/id :feature-request/desc :feature-request/minted-by :feature-request/id :feature-request/minted-at])]
+                     :where [[?frq :feature-request/id]]})
+       (map first)
+       (sort-by :feature-request/minted-at)
+       vec)))
 
 
 
@@ -389,8 +427,8 @@
 ;;userList [oo   ]
 ;;itemsList [oo ]
 ;;tribesList [oo  ]
-;;feedbackList [ ]
-;;featureList [ ]
+;;feedbackList [oo ]
+;;featureList [o ]
 
 ;;createAccount [oo    ]
 ;;login [o  ]
