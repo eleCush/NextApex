@@ -234,6 +234,11 @@
           (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id))))
         (NewsItemCreate.)
         (dom/hr)
+        (dom/div (dom/props {:class "tribelistc fc"})
+          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
+        (TribeCreate.)
+
+        (dom/hr)
         (Chat-UI. "placeholder-username")
         (dom/hr)
         (LoginPart.)
@@ -287,7 +292,48 @@
        (sort-by :item/minted-at)
        vec)))
 
+(e/defn TribeItem [id]
+  (e/server
+    (let [e (xt/entity db id)
+          xt-id   (:xt/id e)
+          creator (:tribe/minted-by e)
+          tribe-id (:tribe/id e)
+          tribe-minted-at (:tribe/minted-at e)
+          link (:tribe/link e)
+          title (:tribe/title e) ;;hn style is (xor link desc)
+          desc (:tribe/desc e)
+          ] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
+      (e/client
+        (dom/div (dom/props {:class "newsitem fi"})
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+             (dom/text author))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text item-id))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text item-minted-at))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text link))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text title))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text desc))))))))
 
+(e/defn TribeCreate [] (e/client (InputSubmit. "new tribe name"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+  [[:xtdb.api/put
+    {:xt/id (random-uuid)
+    :tribe/title v
+    :tribe/id (nid)
+    :tribe/author "logged-in-user"
+    :tribe/minted-at (System/currentTimeMillis)}]]))))))))
+
+#?(:clj
+   (defn tribe-records [db]
+     (->> (xt/q db '{:find [(pull ?t [:xt/id :tribe/minted-by :tribe/id :tribe/minted-at :tribe/title :tribe/members])]
+                     :where [[?t :tribe/id]]})
+       (map first)
+       (sort-by :tribe/minted-at)
+       vec)))
 
 
 
@@ -298,7 +344,7 @@
 
 
 ;;userList [oo   ]
-;;itemsList [ ]
+;;itemsList [oo ]
 ;;tribesList [ ]
 ;;feedbackList [ ]
 ;;featureList [ ]
