@@ -44,21 +44,25 @@
   (let [remewserid
         (e/server (get-in e/*http-request* [:cookies "remewserid" :value]))]
     (dom/div (dom/text "online now: ") (dom/props {:class "gcui"}))
-    (dom/ul
+    (dom/ul (dom/props {:class "fc"})
      (e/server
       (e/for-by first [[session-id username] present]
                 (e/client
-                 (dom/li (dom/text username))))))
+                 (dom/li (dom/props {:class "fi"}) (dom/text username))))))
     (dom/hr)
-    (dom/ul
+    (dom/div (dom/props {:class "newsitemlistc fc"})
+          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id))))
+    (dom/hr)
+    (dom/ul (dom/props {:class "fc"})
      (e/server
       (e/for [{:keys [::username ::msg]} msgs]
         (e/client
-         (dom/li (dom/strong (dom/text username))
-                 (dom/text " " msg))))))
+         (dom/li (dom/props {:class "fi"})
+           (dom/strong (dom/text username))
+           (dom/text " " msg)))))
       (do
         (dom/input
-         (dom/props {:placeholder "Kind a message [global chat]" :class "kind"})
+         (dom/props {:placeholder "Kind a message [global chat]" :class "kind fi"})
          (dom/on "keydown" (e/fn [e]
                              (when (= "Enter" (.-key e))
                                (when-some [v (empty->nil (-> e .-target .-value))]
@@ -68,7 +72,7 @@
                                                       (take 9 %)))
                                   ;;(add-event-notif :new-global-chat-msg (. System (currentTimeMillis)))
                                   )
-                                 (set! (.-value dom/node) "")))))))))
+                                 (set! (.-value dom/node) ""))))))))))
 
 (e/defn ChatExtended []
   (e/client
@@ -218,11 +222,8 @@
             (dom/text "chatroom")))
         (dom/div (dom/props {:class "fr"})
           (dom/div (dom/props {:class "fi"})
-            (dom/text "user avatars"))
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "newsitems"))
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "chatroom")))
+            ;(dom/text "chatroom-goes-here")
+            (Chat-UI. "placeholder-username")))
         (dom/h1 (dom/text "welcome to NextApex.co"))
         (dom/p (dom/text "realtime link share"))
         (dom/hr)
@@ -230,8 +231,7 @@
           (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
         (UserCreate.)
         (dom/hr)
-        (dom/div (dom/props {:class "newsitemlistc fc"})
-          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id))))
+        
         (NewsItemCreate.)
         (dom/hr)
         (dom/div (dom/props {:class "tribelistc fc"})
@@ -247,7 +247,7 @@
         (FeatureRequestCreate.)
 
         (dom/hr)
-        (Chat-UI. "placeholder-username")
+        
         (dom/hr)
         (LoginPart.)
         (dom/hr)
@@ -424,14 +424,14 @@
 
 
 
-;;userList [oo   ]
-;;itemsList [oo ]
-;;tribesList [oo  ]
-;;feedbackList [oo ]
-;;featureList [o ]
+;;userList [ooo       ]
+;;itemsList [ooooo    ]
+;;tribesList [ooooo   ]
+;;feedbackList [ooooo ]
+;;featureList [o      ]
 
-;;createAccount [oo    ]
-;;login [o  ]
+;;createAccount [oo   ]
+;;login [oo           ]
 ;;
 
 ;;oceanDisplay [ | | ]

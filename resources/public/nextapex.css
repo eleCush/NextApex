@@ -71,7 +71,7 @@ label::first-letter{
     font-size: 1.25rem;
 }
 
-.useritem {background-color: #fff;}
+.useritem, .newsitemlistc {background-color: #fff;}
 .b {font-weight: bold;}
 .fr {display: flex; flex-direction: row;}
 .fc {display: flex; flex-direction: column;}
