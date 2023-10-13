@@ -56,9 +56,6 @@
         (e/client
          (dom/li (dom/strong (dom/text username))
                  (dom/text " " msg))))))
-    (if-not (some? remewserid)
-      (dom/div
-       (dom/text "Login to chat."))
       (do
         (dom/input
          (dom/props {:placeholder "Kind a message [global chat]" :class "kind"})
@@ -70,7 +67,7 @@
                                   (swap! !msgs #(cons {::username username ::msg v}
                                                       (take 9 %)))
                                   (add-event-notif :new-global-chat-msg (. System (currentTimeMillis))))
-                                 (set! (.-value dom/node) ""))))))))))
+                                 (set! (.-value dom/node) "")))))))))
 
 (e/defn ChatExtended []
   (e/client
@@ -112,52 +109,40 @@
                                           (new F v)
                                           (set! (.-value dom/node) "")))))))))
 
-(e/defn TodoItem [id]
+(e/defn UserItem [id]
   (e/server
     (let [e (xt/entity db id)
-          status (:task/status e)]
+          username (:user/username e)
+          user-id (:user/id e)
+          user-email (:user/email e)
+          user-phone (:user/phone e)
+          user-minted-at (:user/minted-at e)
+          user-minted-by (:user/minted-by e)
+          user-octave (:user/octave e)
+          user-tribes (:user/tribes e)] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
       (e/client
-        (dom/div
-          (ui/checkbox
-            (case status :active false, :done true)
-            (e/fn [v]
-              (e/server
-                (e/discard
-                  (e/offload
-                    #(xt/submit-tx !xtdb [[:xtdb.api/put
-                                           {:xt/id id
-                                            :task/description (:task/description e) ; repeat
-                                            :task/status (if v :done :active)}]])))))
-            (dom/props {:id id}))
-          (dom/label (dom/props {:for id}) (dom/text (e/server (:task/description e)))))))))
+        (dom/div (dom/props {:class "useritem"})
+          (dom/text (str username ":" user-id ":" user-email ":" user-phone ":" user-minted-at ":" user-minted-by ":" user-octave ":" user-tribes)))))))
 
-(e/defn TodoCreate []
+(e/defn UserCreate []
   (e/client
-    (InputSubmit. "create todo" 
+    (InputSubmit. "create user" 
                   (e/fn [v]
                     (e/server
                       (e/discard
                         (e/offload
                           #(xt/submit-tx !xtdb [[:xtdb.api/put
                                                  {:xt/id (random-uuid)
-                                                  :task/description v
-                                                  :task/status :active}]]))))))))
+                                                  :user/email v
+                                                  :user/id (nid)}]]))))))))
 
 #?(:clj
-   (defn todo-records [db]
-     (->> (xt/q db '{:find [(pull ?e [:xt/id :task/description])]
-                     :where [[?e :task/status]]})
+   (defn user-records [db]
+     (->> (xt/q db '{:find [(pull ?u [:xt/id :user/username :user/id :user/email :user/phone :user/minted-at :user/minted-by :user/octave :user/tribes])]
+                     :where [[?u :user/id]]})
        (map first)
-       (sort-by :task/description)
+       (sort-by :user/minted-at)
        vec)))
-
-(comment (todo-records user/db))
-
-#?(:clj
-   (defn todo-count [db]
-     (count (xt/q db '{:find [?e] :in [$ ?status]
-                       :where [[?e :task/status ?status]]}
-              :active))))
 
 (def login-str (atom ""))
 (def loginn-str (atom ""))
@@ -176,12 +161,7 @@
               
               ;; ajax call here for login
 
-              ;  (e/discard
-              ;    (e/offload
-              ;      #(xt/submit-tx !xtdb [[:xtdb.api/put
-              ;                              {:xt/id (random-uuid)
-              ;                              :task/description v
-              ;                              :task/status :active}]])))
+
               ))
                (dom/text "Click to Login"))))
 
@@ -196,13 +176,16 @@
   (ui/button (e/fn [v]
               (e/server
                 (e/client (.log js/console (e/watch login-str)))
-              
+                 
+              ; (e/server 
               ;  (e/discard
               ;    (e/offload
               ;      #(xt/submit-tx !xtdb [[:xtdb.api/put
-              ;                              {:xt/id (random-uuid)
-              ;                              :task/description v
-              ;                              :task/status :active}]])))
+              ;                              {:xt/id (nid)
+              ;                              :user/number (inc user-count)
+              ;                              :user/username (e/watch login-str)
+              ;                              :user/password (hash-with :argon2 (e/watch loginn-str))
+              ;                              :task/status :active}]]))))
               ))
                (dom/text "Create Account"))))
 
@@ -211,16 +194,15 @@
     (binding [!xtdb user/!xtdb
               db (new (db/latest-db> user/!xtdb))]
       (e/client
-        (dom/link (dom/props {:rel :stylesheet :href "/todo-list.css"}))
-        (dom/h1 (dom/text "minimal todo list"))
-        (dom/p (dom/text "it's multiplayer, try two tabs"))
-        (dom/div (dom/props {:class "todo-list"})
-          (TodoCreate.)
-          (dom/div {:class "todo-items"}
-            (e/server
-              (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(todo-records db))]
-                (TodoItem. id))))
-          (Chat-UI.)
+        (dom/h1 (dom/text "welcome to NextApex.co"))
+        (dom/p (dom/text "realtime link share"))
+        (dom/div (dom/props {:class "userlistc"})
+          (e/server
+            (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))]
+              (UserItem. id))))
+          (UserCreate.)
+          (dom/hr)
+          (Chat-UI. "placeholder-username")
           (dom/hr)
           (LoginPart.)
           (dom/hr)
@@ -228,18 +210,23 @@
           (dom/p (dom/props {:class "counter"})
             (dom/span (dom/props {:class "count"})
               (dom/text (e/server (e/offload #(todo-count db)))))
-            (dom/text " items left")))))))
+            (dom/text " items left"))))))
 
-;;userList
-;;itemsList
-;;tribesList
-;;feedbackList
-;;featureList
+;;userList [oo   ]
+;;itemsList [ ]
+;;tribesList [ ]
+;;feedbackList [ ]
+;;featureList [ ]
 
-;;createAccount [o]
-;;login [o]
+;;createAccount [oo    ]
+;;login [o  ]
 ;;
 
+;;oceanDisplay [ | | ]
 
+;;tribeDisplay [ | | ]
 
+;;tribe [curators: , observers: , topic, id#, membercount, max-member-count]
+
+;;
 

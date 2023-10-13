@@ -13,7 +13,7 @@ body{
     background-color: #fff;
     background-color: rgb(38, 208, 129);
     background-color: hsl(152, 69.1%, 48.2%);
-    background-color: hsl(210, 55%, 75%);
+    background-color: hsl(210, 95%, 55%);
     margin: 0;
     overflow-y: scroll;
     overflow-x: hidden;
@@ -70,3 +70,5 @@ label::first-letter{
 .count{
     font-size: 1.25rem;
 }
+
+.useritem {background-color: #fff;}
