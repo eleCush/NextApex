@@ -13,7 +13,7 @@ body{
     background-color: #fff;
     background-color: rgb(38, 208, 129);
     background-color: hsl(152, 69.1%, 48.2%);
-    background-color: hsl(210, 95%, 55%);
+    background-color: hsl(159, 100%, 54%);
     margin: 0;
     overflow-y: scroll;
     overflow-x: hidden;
@@ -72,3 +72,10 @@ label::first-letter{
 }
 
 .useritem {background-color: #fff;}
+
+.fr {display: flex; flex-direction: row;}
+.fc {display: flex; flex-direction: column;}
+.fi {display: flex; flex-grow: 1;}
+
+.fi, .fr, .fc {border: 1px solid rebeccapurple;}
+.fi {padding: 4px;}
