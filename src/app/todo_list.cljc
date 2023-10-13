@@ -26,7 +26,7 @@
 (defn nid
   "Mints a new nid."
   []
-  (subs (str (random-uuid)) 0 9))
+  (subs (str (random-uuid)) 4 13))
 
 (e/def !xtdb)
 (e/def db) ; injected database ref; Electric defs are always dynamic
@@ -66,7 +66,8 @@
                                  (e/server
                                   (swap! !msgs #(cons {::username username ::msg v}
                                                       (take 9 %)))
-                                  (add-event-notif :new-global-chat-msg (. System (currentTimeMillis))))
+                                  ;;(add-event-notif :new-global-chat-msg (. System (currentTimeMillis)))
+                                  )
                                  (set! (.-value dom/node) "")))))))))
 
 (e/defn ChatExtended []
@@ -121,20 +122,27 @@
           user-octave (:user/octave e)
           user-tribes (:user/tribes e)] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
       (e/client
-        (dom/div (dom/props {:class "useritem"})
-          (dom/text (str username ":" user-id ":" user-email ":" user-phone ":" user-minted-at ":" user-minted-by ":" user-octave ":" user-tribes)))))))
+        (dom/div (dom/props {:class "useritem fi"})
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+             (dom/text username))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text user-id))
+            (dom/div (dom/props {:class "fi b"})
+             (dom/text user-email))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text user-phone))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text user-minted-at))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text user-tribes)))
+          (dom/text user-octave))))))
 
-(e/defn UserCreate []
-  (e/client
-    (InputSubmit. "create user" 
-                  (e/fn [v]
-                    (e/server
-                      (e/discard
-                        (e/offload
-                          #(xt/submit-tx !xtdb [[:xtdb.api/put
-                                                 {:xt/id (random-uuid)
-                                                  :user/email v
-                                                  :user/id (nid)}]]))))))))
+(e/defn UserCreate [] (e/client (InputSubmit. "create user"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+  [[:xtdb.api/put
+    {:xt/id (random-uuid)
+    :user/email v
+    :user/id (nid)}]]))))))))
 
 #?(:clj
    (defn user-records [db]
@@ -217,11 +225,14 @@
             (dom/text "chatroom")))
         (dom/h1 (dom/text "welcome to NextApex.co"))
         (dom/p (dom/text "realtime link share"))
-        (dom/div (dom/props {:class "userlistc"})
-          (e/server
-            (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))]
-              (UserItem. id))))
+        (dom/hr)
+        (dom/div (dom/props {:class "userlistc fc"})
+          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
         (UserCreate.)
+        (dom/hr)
+        (dom/div (dom/props {:class "newsitemlistc fc"})
+          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id))))
+        (NewsItemCreate.)
         (dom/hr)
         (Chat-UI. "placeholder-username")
         (dom/hr)
@@ -232,6 +243,59 @@
     )
   )
 )
+
+(e/defn NewsItem [id]
+  (e/server
+    (let [e (xt/entity db id)
+          xt-id   (:xt/id e)
+          author (:item/minted-by e)
+          item-id (:item/id e)
+          item-minted-at (:item/minted-at e)
+          link (:item/link e)
+          title (:item/title e) ;;hn style is (xor link desc)
+          desc (:item/desc e)
+          ] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
+      (e/client
+        (dom/div (dom/props {:class "newsitem fi"})
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+             (dom/text author))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text item-id))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text item-minted-at))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text link))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text title))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text desc))))))))
+
+(e/defn NewsItemCreate [] (e/client (InputSubmit. "link to add"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+  [[:xtdb.api/put
+    {:xt/id (random-uuid)
+    :item/link v
+    :item/id (nid)
+    :item/author "logged-in-user"
+    :item/minted-at (System/currentTimeMillis)}]]))))))))
+
+#?(:clj
+   (defn newsitem-records [db]
+     (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/title :item/desc])]
+                     :where [[?i :item/id]]})
+       (map first)
+       (sort-by :item/minted-at)
+       vec)))
+
+
+
+
+
+
+
+
+
+
 
 ;;userList [oo   ]
 ;;itemsList [ ]

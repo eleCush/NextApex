@@ -72,7 +72,7 @@ label::first-letter{
 }
 
 .useritem {background-color: #fff;}
-
+.b {font-weight: bold;}
 .fr {display: flex; flex-direction: row;}
 .fc {display: flex; flex-direction: column;}
 .fi {display: flex; flex-grow: 1;}
