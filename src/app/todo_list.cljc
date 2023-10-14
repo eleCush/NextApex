@@ -51,7 +51,8 @@
                  (dom/li (dom/props {:class "fi"}) (dom/text username))))))
     (dom/hr)
     (dom/div (dom/props {:class "newsitemlistc fc"})
-          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id))))
+          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id)))
+    (dom/div (dom/props {:class "fi"}) (NewsItemCreate.)))
     (dom/hr)
     (dom/ul (dom/props {:class "fc"})
      (e/server
@@ -146,7 +147,8 @@
   [[:xtdb.api/put
     {:xt/id (random-uuid)
     :user/email v
-    :user/id (nid)}]]))))))))
+    :user/id (nid)
+    :user/minted-at (System/currentTimeMillis)}]]))))))))
 
 #?(:clj
    (defn user-records [db]
@@ -232,7 +234,7 @@
         (UserCreate.)
         (dom/hr)
         
-        (NewsItemCreate.)
+
         (dom/hr)
         (dom/div (dom/props {:class "tribelistc fc"})
           (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
@@ -267,10 +269,12 @@
           link (:item/link e)
           title (:item/title e) ;;hn style is (xor link desc)
           desc (:item/desc e)
+          thumbnail (:item/thumbnail e)
           ] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
       (e/client
         (dom/div (dom/props {:class "newsitem fi"})
           (dom/div (dom/props {:class "fr"})
+            (dom/img (dom/props {:class "fi" :src (str "img/" thumbnail)}))
             (dom/div (dom/props {:class "fi"})
              (dom/text author))
             (dom/div (dom/props {:class "fi"})
