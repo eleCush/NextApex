@@ -118,6 +118,7 @@
 (e/defn UserItem [id]
   (e/server
     (let [e (xt/entity db id)
+          xt-id (:xt/id e)
           username (:user/username e)
           user-id (:user/id e)
           user-email (:user/email e)
@@ -125,6 +126,7 @@
           user-minted-at (:user/minted-at e)
           user-minted-by (:user/minted-by e)
           user-octave (:user/octave e)
+          pw (:user/password e)
           user-tribes (:user/tribes e)] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
       (e/client
         (dom/div (dom/props {:class "useritem fi"})
@@ -140,8 +142,10 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text user-minted-at))
             (dom/div (dom/props {:class "fi"})
-             (dom/text user-tribes)))
-          (dom/text user-octave))))))
+             (dom/text pw))
+            (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id))
+             )))))))
 
 (e/defn UserCreate [] (e/client (InputSubmit. "create user"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
@@ -152,14 +156,17 @@
 
 #?(:clj
    (defn user-records [db]
-     (->> (xt/q db '{:find [(pull ?u [:xt/id :user/username :user/id :user/email :user/phone :user/minted-at :user/minted-by :user/octave :user/tribes])]
+     (->> (xt/q db '{:find [(pull ?u [:xt/id :user/username :user/id :user/email :user/phone :user/minted-at :user/minted-by :user/octave :user/tribes :user/password])]
                      :where [[?u :user/id]]})
        (map first)
        (sort-by :user/minted-at)
        vec)))
 
-(def login-str (atom ""))
-(def loginn-str (atom ""))
+;;move between membranes with e/def (creates a new thing in the third layer accessible to both)
+#?(:cljs (def login-str (atom "")))
+(e/def ls (e/client (e/watch login-str)))
+#?(:cljs (def loginn-str (atom "")))
+(e/def lpw (e/client (e/watch loginn-str)))
 
 (e/defn LoginPart []
  (e/client
@@ -171,7 +178,7 @@
                                      (reset! loginn-str (.-value dom/node) ))))
   (ui/button (e/fn [v]
               (e/server
-                (e/client (.log js/console (e/watch login-str) " | " (e/watch loginn-str)))
+                
               
               ;; ajax call here for login
 
@@ -187,21 +194,15 @@
   (dom/input (dom/props {:placeholder "password" :type "password"})
                  (dom/on "change" (e/fn [e]
                                      (reset! loginn-str (.-value dom/node) ))))
-  (ui/button (e/fn [v]
-              (e/server
-                (e/client (.log js/console (e/watch login-str)))
-                 
-              ; (e/server 
-              ;  (e/discard
-              ;    (e/offload
-              ;      #(xt/submit-tx !xtdb [[:xtdb.api/put
-              ;                              {:xt/id (nid)
-              ;                              :user/number (inc user-count)
-              ;                              :user/username (e/watch login-str)
-              ;                              :user/password (hash-with :argon2 (e/watch loginn-str))
-              ;                              :task/status :active}]]))))
-              ))
-               (dom/text "Create Account"))))
+  (ui/button (e/fn []
+                 (e/server (e/discard  (e/offload  #(xt/submit-tx !xtdb [[:xtdb.api/put
+    {:xt/id (random-uuid)
+    :user/id (nid)
+    :user/minted-at (System/currentTimeMillis)
+    :user/username ls
+    :user/password (hash-with :argon2 lpw)}]])))))
+
+      (dom/text "Create Account"))))
 
 (e/defn Todo-list []
   (e/server
@@ -226,6 +227,11 @@
           (dom/div (dom/props {:class "fi"})
             ;(dom/text "chatroom-goes-here")
             (Chat-UI. "placeholder-username")))
+        (dom/div (dom/props {:class "fr"})
+          (dom/div (dom/props {:class "fi"})
+            (dom/text "currently 0 free slots in this tribe"))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text "join waitlist (5 people so far)")))
         (dom/h1 (dom/text "welcome to NextApex.co"))
         (dom/p (dom/text "realtime link share"))
         (dom/hr)
@@ -286,7 +292,9 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text title))
             (dom/div (dom/props {:class "fi"})
-             (dom/text desc))))))))
+             (dom/text desc))
+            (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id)))))))))
 
 (e/defn NewsItemCreate [] (e/client (InputSubmit. "link to add"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
@@ -329,7 +337,9 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text title))
             (dom/div (dom/props {:class "fi"})
-             (dom/text desc))))))))
+             (dom/text desc))
+            (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id)))))))))
 
 (e/defn TribeCreate [] (e/client (InputSubmit. "new tribe name"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
@@ -367,7 +377,9 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text feedback-minted-at))
             (dom/div (dom/props {:class "fi"})
-             (dom/text minted-by))))))))
+             (dom/text minted-by))
+            (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id)))))))))
 
 (e/defn FeedbackCreate [] (e/client (InputSubmit. "feedback desc"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
@@ -406,7 +418,9 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text feature-request-minted-at))
             (dom/div (dom/props {:class "fi"})
-             (dom/text minted-by))))))))
+             (dom/text minted-by))
+            (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id)))))))))
 
 (e/defn FeatureRequestCreate [] (e/client (InputSubmit. "Feature Request"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
