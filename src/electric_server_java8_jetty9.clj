@@ -170,10 +170,37 @@
       (cookies/wrap-cookies)
       (wrap-params)))
 
+(defn wrap-login-verify "This verifies user/pw combo for logging in."
+  [next-handler]
+  (-> (fn [ring-req]
+        (let [params (:params ring-req)
+              _ (println ring-req)
+              username (get params "user")
+              pass (get params "pass")
+              nextapex-result (-> (xt/q (xt/db user/!xtdb) '{:find [password]
+                                                           :where [[?u :user/username ?username]
+                                                                   [?u :user/password password]]
+                                                           :in [?username]}
+                                      username)
+                                ffirst)
+              hashes-match? (if (not (nil? nextapex-result)) (verify-with :argon2 pass nextapex-result) false)]
+          ;(println "pw1: " pass " | pw2: " nextapex-result)
+          (if hashes-match?
+            (do (println "the username is : " username)
+              (-> {:status 200 :body "Login Success for NextApex.co"}
+                (res/set-cookie "username" username {:http-only true :max-age (* 60 60 24 3)})
+                (res/set-cookie "nextapexid" (str "NEXT|APEX|V000|" username) {:http-only true :max-age (* 60 60 24 3)})
+                ))
+            {:status 401 :body (str "so not the vibe") ;(str " | " user-quant " | " timestamp " | " hash " || " sanitized " | " code " | " hashes-match? " | " raw " ||| " in-ts)
+             })))
+      (cookies/wrap-cookies)
+      (wrap-params)))
+
 (defn wrap-demo-router "A basic path-based routing middleware"
   [next-handler]
   (fn [ring-req]
     (case (:uri ring-req)
+      
       ;"/authoriginal" (let [response  ((wrap-demo-authentication next-handler) ring-req)]
       ;          (if (= 401 (:status response)) ; authenticated?
       ;            response                     ; send response to trigger auth prompt
@@ -183,6 +210,11 @@
                   (res/header response "Location" "/"))
       "/magic-link" (let [response ((wrap-magic-link-auth next-handler) ring-req)] response)
       "/authentim8" (let [response ((wrap-magic-link-verify next-handler) ring-req)] response)
+
+      "/nextapex-login" (let [response ((wrap-login-verify next-handler) ring-req)] 
+           response)
+
+      "/ringreq" (str ring-req)
       "/logout" (let [response ((clear-cookie-handler next-handler) ring-req)]
                   response)
       ;"/create-account" (let [response-msg "hit the serva"] (do (println ring-req) {:status 200 :body response-msg}))

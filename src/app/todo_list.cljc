@@ -168,22 +168,27 @@
 #?(:cljs (def loginn-str (atom "")))
 (e/def lpw (e/client (e/watch loginn-str)))
 
+#?(:cljs (defn handle-response [response]
+  (if (= 200 (:status response))
+    (println "Login success: " @login-str)
+    (println "Login unsuccessful just now."))))
+
+#?(:cljs (defn clj->json [clj-data]
+  (js/JSON.stringify (clj->js clj-data))))
+
 (e/defn LoginPart []
  (e/client
-  (dom/input (dom/props {:placeholder "username"})
+  (dom/input (dom/props {:placeholder "u  sername"})
                  (dom/on "change" (e/fn [e]
                                      (reset! login-str (.-value dom/node) ))))
   (dom/input (dom/props {:placeholder "password" :type "password"})
                  (dom/on "change" (e/fn [e]
                                      (reset! loginn-str (.-value dom/node) ))))
-  (ui/button (e/fn [v]
-              (e/server
-                
-              
-              ;; ajax call here for login
-
-
-              ))
+  (ui/button (e/fn []
+                (POST "http://localhost:8080/nextapex-login" 
+                   {:params {:user ls :pass lpw}
+                    :format :raw
+                   :handler handle-response}))
                (dom/text "Click to Login"))))
 
 (e/defn CreateAccountPart []
@@ -208,61 +213,64 @@
   (e/server
     (binding [!xtdb user/!xtdb
               db (new (db/latest-db> user/!xtdb))]
-      (e/client
-        (dom/div (dom/props {:class "fr"})
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "NextApex"))
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "ocean // main page"))
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "login/create an account")))
-        (dom/div (dom/props {:class "fr"})
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "17 people in this tribe"))
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "current tribe: Saris and Indian Fashion"))
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "chatroom")))
-        (dom/div (dom/props {:class "fr"})
-          (dom/div (dom/props {:class "fi"})
-            ;(dom/text "chatroom-goes-here")
-            (Chat-UI. "placeholder-username")))
-        (dom/div (dom/props {:class "fr"})
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "currently 0 free slots in this tribe"))
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "join waitlist (5 people so far)")))
-        (dom/h1 (dom/text "welcome to NextApex.co"))
-        (dom/p (dom/text "realtime link share"))
-        (dom/hr)
-        (dom/div (dom/props {:class "userlistc fc"})
-          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
-        (UserCreate.)
-        (dom/hr)
-        
+      (let [username (get-in e/*http-request* [:cookies "username" :value])]
+        (e/client
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+              (dom/text "NextApex"))
+            (dom/div (dom/props {:class "fi"})
+              (dom/text "ocean // main page"))
+            (dom/div (dom/props {:class "fi"})
+              (dom/text (e/server (get-in e/*http-request* [:cookies "username" :value]))))
+            )
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+              (dom/text "17 people in this tribe"))
+            (dom/div (dom/props {:class "fi"})
+              (dom/text "current tribe: Saris and Indian Fashion"))
+            (dom/div (dom/props {:class "fi"})
+              (dom/text "chatroom")))
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+              ;(dom/text "chatroom-goes-here")
+              (Chat-UI. "placeholder-username")))
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+              (dom/text "currently 0 free slots in this tribe"))
+            (dom/div (dom/props {:class "fi"})
+              (dom/text "join waitlist (5 people so far)")))
+          (dom/h1 (dom/text "welcome to NextApex.co"))
+          (dom/p (dom/text "realtime link share"))
+          (dom/hr)
+          (dom/div (dom/props {:class "userlistc fc"})
+            (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
+          (UserCreate.)
+          (dom/hr)
+          
 
-        (dom/hr)
-        (dom/div (dom/props {:class "tribelistc fc"})
-          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
-        (TribeCreate.)
-        (dom/hr)
-        (dom/div (dom/props {:class "feedbacklistc fc"})
-          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
-        (FeedbackCreate.)
-        (dom/hr)
-        (dom/div (dom/props {:class "featurerequestlistc fc"})
-          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
-        (FeatureRequestCreate.)
+          (dom/hr)
+          (dom/div (dom/props {:class "tribelistc fc"})
+            (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
+          (TribeCreate.)
+          (dom/hr)
+          (dom/div (dom/props {:class "feedbacklistc fc"})
+            (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
+          (FeedbackCreate.)
+          (dom/hr)
+          (dom/div (dom/props {:class "featurerequestlistc fc"})
+            (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
+          (FeatureRequestCreate.)
 
-        (dom/hr)
-        
-        (dom/hr)
-        (LoginPart.)
-        (dom/hr)
-        (CreateAccountPart.)
+          (dom/hr)
+          
+          (dom/hr)
+          (LoginPart.)
+          (dom/hr)
+          (CreateAccountPart.)
       )
     )
   )
+)
 )
 
 (e/defn NewsItem [id]
