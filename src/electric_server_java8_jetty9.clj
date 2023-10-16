@@ -187,7 +187,7 @@
           ;(println "pw1: " pass " | pw2: " nextapex-result)
           (if hashes-match?
             (do (println "the username is : " username)
-              (-> {:status 200 :body "Login Success for NextApex.co"}
+              (-> {:status 200 :body username}
                 (res/set-cookie "username" username {:http-only true :max-age (* 60 60 24 3)})
                 (res/set-cookie "nextapexid" (str "NEXT|APEX|V000|" username) {:http-only true :max-age (* 60 60 24 3)})
                 ))

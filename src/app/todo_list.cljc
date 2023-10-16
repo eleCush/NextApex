@@ -167,10 +167,13 @@
 (e/def ls (e/client (e/watch login-str)))
 #?(:cljs (def loginn-str (atom "")))
 (e/def lpw (e/client (e/watch loginn-str)))
+#?(:cljs (def !online-user (atom "")))
+(e/def online-user (e/client (e/watch !online-user)))
 
 #?(:cljs (defn handle-response [response]
-  (if (= 200 (:status response))
-    (println "Login success: " @login-str)
+  (println response)
+  (if (not= "unsuccessful" response)
+    (reset! !online-user response)
     (println "Login unsuccessful just now."))))
 
 #?(:cljs (defn clj->json [clj-data]
@@ -178,7 +181,7 @@
 
 (e/defn LoginPart []
  (e/client
-  (dom/input (dom/props {:placeholder "u  sername"})
+  (dom/input (dom/props {:placeholder "username"})
                  (dom/on "change" (e/fn [e]
                                      (reset! login-str (.-value dom/node) ))))
   (dom/input (dom/props {:placeholder "password" :type "password"})
@@ -213,7 +216,7 @@
   (e/server
     (binding [!xtdb user/!xtdb
               db (new (db/latest-db> user/!xtdb))]
-      (let [username (get-in e/*http-request* [:cookies "username" :value])]
+
         (e/client
           (dom/div (dom/props {:class "fr"})
             (dom/div (dom/props {:class "fi"})
@@ -221,7 +224,7 @@
             (dom/div (dom/props {:class "fi"})
               (dom/text "ocean // main page"))
             (dom/div (dom/props {:class "fi"})
-              (dom/text (e/server (get-in e/*http-request* [:cookies "username" :value]))))
+              (dom/text online-user))
             )
           (dom/div (dom/props {:class "fr"})
             (dom/div (dom/props {:class "fi"})
@@ -271,7 +274,7 @@
     )
   )
 )
-)
+
 
 (e/defn NewsItem [id]
   (e/server
