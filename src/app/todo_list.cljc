@@ -166,6 +166,11 @@
 (e/def create-account-visible (e/client (e/watch !create-account-visible)))
 #?(:cljs (def !create-account-msg (atom "")))
 (e/def create-account-msg (e/client (e/watch !create-account-msg)))
+#?(:cljs (def !view (atom :main)))
+(e/def view (e/client (e/watch !view)))
+#?(:cljs (def !current-tribe-view (atom "ocean")))
+(e/def current-tribe-view (e/client (e/watch !current-tribe-view)))
+
 
 #?(:cljs (defn handle-response [response]
   (println response)
@@ -251,13 +256,22 @@
               (dom/div (dom/props {:class "fi"})
                 (dom/text "17 people in this tribe"))
               (dom/div (dom/props {:class "fi"})
-                (dom/text "current tribe: Saris and Indian Fashion"))
+                (when (= :main view)
+                  (dom/text "Current Tribe: " current-tribe-view)
+                  (ui/button (e/fn [] (reset! !view :tribes)) (dom/text "To Tribes List")))
+                (when (= :tribes view)
+                  (ui/button (e/fn [] (reset! !view :main)) (dom/text "Back to Main"))))
               (dom/div (dom/props {:class "fi"})
-                (dom/text "chatroom")))
+                (dom/text current-tribe-view " chatroom")))
             (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
                 ;(dom/text "chatroom-goes-here")
-                (Link-and-Chat-Extended. "placeholder-username")))
+                (when (= :tribes view)
+                  (dom/div (dom/props {:class "tribelistc fc"})
+                    (ui/button (e/fn [] (reset! !view :main) (reset! !current-tribe-view "ocean")) (dom/text "To Ocean"))
+                    (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id)))))
+                (when (= :main view)
+                  (Link-and-Chat-Extended. "placeholder-username"))))
             (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
                 (dom/text "currently 0 free slots in this tribe"))
@@ -371,7 +385,7 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text link))
             (dom/div (dom/props {:class "fi"})
-             (dom/text title))
+             (ui/button (e/fn [] (reset! !current-tribe-view title) (reset! !view :main)) (dom/text title)))
             (dom/div (dom/props {:class "fi"})
              (dom/text desc))
             (dom/div (dom/props {:class "fi"})
@@ -382,7 +396,7 @@
     {:xt/id (random-uuid)
     :tribe/title v
     :tribe/id (nid)
-    :tribe/author "logged-in-user"
+    :tribe/minted-by online-user
     :tribe/minted-at (System/currentTimeMillis)}]]))))))))
 
 #?(:clj
@@ -422,7 +436,7 @@
     {:xt/id (random-uuid)
     :feedback/desc v
     :feedback/id (nid)
-    :feedback/author "logged-in-user"
+    :feedback/minted-by online-user
     :feedback/mood "current-mood"
     :feedback/minted-at (System/currentTimeMillis)}]]))))))))
 
@@ -463,7 +477,7 @@
     {:xt/id (random-uuid)
     :feature-request/desc v
     :feature-request/id (nid)
-    :feature-request/author "logged-in-user"
+    :feature-request/minted-by online-user
     :feature-request/mood "current-mood"
     :feature-request/minted-at (System/currentTimeMillis)}]]))))))))
 
