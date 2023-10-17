@@ -47,8 +47,9 @@
   (-> (fn [ring-req]
         (let [res (next-handler ring-req)]
           (res/header res "Location" "/")
-          (res/set-cookie res "remewserid" "guest" {:http-only true :max-age 1})
-          (clear-cookie res "remewserid")))
+          ;; (res/set-cookie res "username" "guest" {:http-only true :max-age 1})
+          (clear-cookie res "nextapexid")
+          (clear-cookie res "username")))
       (cookies/wrap-cookies)
       ))
 
@@ -174,7 +175,6 @@
   [next-handler]
   (-> (fn [ring-req]
         (let [params (:params ring-req)
-              _ (println ring-req)
               username (get params "user")
               pass (get params "pass")
               nextapex-result (-> (xt/q (xt/db user/!xtdb) '{:find [password]
@@ -186,7 +186,7 @@
               hashes-match? (if (not (nil? nextapex-result)) (verify-with :argon2 pass nextapex-result) false)]
           ;(println "pw1: " pass " | pw2: " nextapex-result)
           (if hashes-match?
-            (do (println "the username is : " username)
+            (do (println "Successful login : " username)
               (-> {:status 200 :body username}
                 (res/set-cookie "username" username {:http-only true :max-age (* 60 60 24 3)})
                 (res/set-cookie "nextapexid" (str "NEXT|APEX|V000|" username) {:http-only true :max-age (* 60 60 24 3)})

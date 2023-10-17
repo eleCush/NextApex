@@ -79,3 +79,6 @@ label::first-letter{
 
 .fi, .fr, .fc {border: 1px solid rebeccapurple;}
 .fi {padding: 4px;}
+
+.bigc {width: 80%; left: 59.5%; margin-left: -50%; position: absolute;}
+.ra {position: absolute; right: 8px;}

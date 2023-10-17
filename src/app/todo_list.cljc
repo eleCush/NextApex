@@ -40,9 +40,9 @@
 #?(:clj (defonce !eventses (atom []))) ; eventses are coll of event-type & timestamp and only accepts timestamps within :big-window: while interface displays :lil-window: worth of notifs
 (e/def eventses (e/server (e/watch !eventses)))
 
-(e/defn Chat-UI [username]
-  (let [remewserid
-        (e/server (get-in e/*http-request* [:cookies "remewserid" :value]))]
+(e/defn Link-and-Chat-UI [username]
+  (let [usernamefromhttpreq
+        (e/server (get-in e/*http-request* [:cookies "username" :value]))]
     (dom/div (dom/text "online now: ") (dom/props {:class "gcui"}))
     (dom/ul (dom/props {:class "fc"})
      (e/server
@@ -75,22 +75,17 @@
                                   )
                                  (set! (.-value dom/node) ""))))))))))
 
-(e/defn ChatExtended []
+(e/defn Link-and-Chat-Extended []
   (e/client
-   (let [session-id (e/server (get-in e/*http-request* [:headers "sec-websocket-key"]))
-         current-remewser (e/server (get-in e/*http-request* [:cookies "remewserid" :value]))
-         usernomen  "usernomenk"
-         rec (e/server  (e/offload #(the-mine-user-record db (str current-remewser))))
-         r (first rec)
-         yuzaneim (or (:user/username r) (str "Guest of " (count present)))]
-     (if-not (some? usernomen)
-       (Chat-UI. (str "Fresh Music Lover"))
+   (let [session-id (e/server (get-in e/*http-request* [:headers "sec-websocket-key"]))]
+     (if-not (some? online-user)
+       (Link-and-Chat-UI. (str "Fresh Presence"))
        (do
          (e/server
-          (swap! !present assoc session-id yuzaneim)
+          (swap! !present assoc session-id online-user)
           (e/on-unmount #(swap! !present dissoc session-id)))
          ;(dom/div (dom/text "Authenticated as: " remewserid))
-         (Chat-UI. yuzaneim))))))
+         (Link-and-Chat-UI. online-user))))))
 
 (e/defn InputSubmit [ph F]
   ; Custom input control using lower dom interface for Enter handling
@@ -142,17 +137,10 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text user-minted-at))
             (dom/div (dom/props {:class "fi"})
-             (dom/text pw))
+             (dom/text (subs pw 21 32)))
             (dom/div (dom/props {:class "fi"})
              (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id))
              )))))))
-
-(e/defn UserCreate [] (e/client (InputSubmit. "create user"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
-  [[:xtdb.api/put
-    {:xt/id (random-uuid)
-    :user/email v
-    :user/id (nid)
-    :user/minted-at (System/currentTimeMillis)}]]))))))))
 
 #?(:clj
    (defn user-records [db]
@@ -175,6 +163,12 @@
   (if (not= "unsuccessful" response)
     (reset! !online-user response)
     (println "Login unsuccessful just now."))))
+
+#?(:cljs (defn handle-logout-response [response]
+  (println response)
+  (if (not= "unsuccessful" response)
+    (reset! !online-user "")
+    (println "Logoutn unsuccessful just now."))))
 
 #?(:cljs (defn clj->json [clj-data]
   (js/JSON.stringify (clj->js clj-data))))
@@ -213,68 +207,79 @@
       (dom/text "Create Account"))))
 
 (e/defn Todo-list []
-  (e/server
+  (e/server (let [username-from-http-req (e/server (get-in e/*http-request* [:cookies "username" :value]))]
     (binding [!xtdb user/!xtdb
               db (new (db/latest-db> user/!xtdb))]
-
         (e/client
-          (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi"})
-              (dom/text "NextApex"))
-            (dom/div (dom/props {:class "fi"})
-              (dom/text "ocean // main page"))
-            (dom/div (dom/props {:class "fi"})
-              (dom/text online-user))
-            )
-          (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi"})
-              (dom/text "17 people in this tribe"))
-            (dom/div (dom/props {:class "fi"})
-              (dom/text "current tribe: Saris and Indian Fashion"))
-            (dom/div (dom/props {:class "fi"})
-              (dom/text "chatroom")))
-          (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi"})
-              ;(dom/text "chatroom-goes-here")
-              (Chat-UI. "placeholder-username")))
-          (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi"})
-              (dom/text "currently 0 free slots in this tribe"))
-            (dom/div (dom/props {:class "fi"})
-              (dom/text "join waitlist (5 people so far)")))
-          (dom/h1 (dom/text "welcome to NextApex.co"))
-          (dom/p (dom/text "realtime link share"))
-          (dom/hr)
-          (dom/div (dom/props {:class "userlistc fc"})
-            (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
-          (UserCreate.)
-          (dom/hr)
-          
+          (if (some? username-from-http-req) (reset! !online-user username-from-http-req)) ;;check session, set cljs var
+          (dom/div (dom/props {:class "bigc"})
+            (dom/div (dom/props {:class "fr"})
+              (dom/div (dom/props {:class "fi"})
+                (dom/text "NextApex"))
+              (dom/div (dom/props {:class "fi"})
+                (dom/text "ocean // main page"))
+              (dom/div (dom/props {:class "fi"})
+                (dom/text online-user))
+                (if (not (empty? online-user))
+                  (ui/button (e/fn []
+                    (POST "http://localhost:8080/logout" 
+                      {:params {:hey "log me out"}
+                       :format :raw
+                       :handler handle-logout-response}))
+                    (dom/props {:class "ra"})
+                    (dom/text "Logout"))
+                  (LoginPart.))
+              )
+            (dom/div (dom/props {:class "fr"})
+              (dom/div (dom/props {:class "fi"})
+                (dom/text "17 people in this tribe"))
+              (dom/div (dom/props {:class "fi"})
+                (dom/text "current tribe: Saris and Indian Fashion"))
+              (dom/div (dom/props {:class "fi"})
+                (dom/text "chatroom")))
+            (dom/div (dom/props {:class "fr"})
+              (dom/div (dom/props {:class "fi"})
+                ;(dom/text "chatroom-goes-here")
+                (Link-and-Chat-Extended. "placeholder-username")))
+            (dom/div (dom/props {:class "fr"})
+              (dom/div (dom/props {:class "fi"})
+                (dom/text "currently 0 free slots in this tribe"))
+              (dom/div (dom/props {:class "fi"})
+                (dom/text "join waitlist (5 people so far)")))
+            (dom/h1 (dom/text "welcome to NextApex.co"))
+            (dom/p (dom/text "realtime link share"))
+            (dom/hr)
+            (dom/div (dom/props {:class "userlistc fc"})
+              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
+            
 
-          (dom/hr)
-          (dom/div (dom/props {:class "tribelistc fc"})
-            (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
-          (TribeCreate.)
-          (dom/hr)
-          (dom/div (dom/props {:class "feedbacklistc fc"})
-            (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
-          (FeedbackCreate.)
-          (dom/hr)
-          (dom/div (dom/props {:class "featurerequestlistc fc"})
-            (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
-          (FeatureRequestCreate.)
+            (dom/hr)
+            (dom/div (dom/props {:class "tribelistc fc"})
+              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
+            (TribeCreate.)
+            (dom/hr)
+            (dom/div (dom/props {:class "feedbacklistc fc"})
+              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
+            (FeedbackCreate.)
+            (dom/hr)
+            (dom/div (dom/props {:class "featurerequestlistc fc"})
+              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
+            (FeatureRequestCreate.)
 
-          (dom/hr)
-          
-          (dom/hr)
-          (LoginPart.)
-          (dom/hr)
-          (CreateAccountPart.)
+            (dom/hr)
+            
+            (dom/hr)
+
+              (dom/hr)
+              (CreateAccountPart.)
+              (dom/hr)
+
+        )
       )
     )
   )
+ )
 )
-
 
 (e/defn NewsItem [id]
   (e/server
