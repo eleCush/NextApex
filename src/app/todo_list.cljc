@@ -52,15 +52,16 @@
     (dom/hr)
     (dom/div (dom/props {:class "newsitemlistc fc"})
           (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id)))
-    (dom/div (dom/props {:class "fi"}) (NewsItemCreate.)))
+    (dom/div (dom/props {:class "fing"}) (when (not= "" online-user) (NewsItemCreate.))))
     (dom/hr)
     (dom/ul (dom/props {:class "fc"})
      (e/server
       (e/for [{:keys [::username ::msg]} msgs]
         (e/client
-         (dom/li (dom/props {:class "fi"})
-           (dom/strong (dom/text username))
+         (dom/li (dom/props {:class "fing"})
+           (dom/strong (dom/text username ": "))
            (dom/text " " msg)))))
+      (when (not= "" online-user)
       (do
         (dom/input
          (dom/props {:placeholder "Kind a message [global chat]" :class "kind fi"})
@@ -73,7 +74,7 @@
                                                       (take 9 %)))
                                   ;;(add-event-notif :new-global-chat-msg (. System (currentTimeMillis)))
                                   )
-                                 (set! (.-value dom/node) ""))))))))))
+                                 (set! (.-value dom/node) "")))))))))))
 
 (e/defn Link-and-Chat-Extended []
   (e/client
@@ -139,7 +140,7 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text (subs pw 21 32)))
             (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id))
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))
              )))))))
 
 #?(:clj
@@ -155,8 +156,16 @@
 (e/def ls (e/client (e/watch login-str)))
 #?(:cljs (def loginn-str (atom "")))
 (e/def lpw (e/client (e/watch loginn-str)))
+#?(:cljs (def !ca-usrname (atom "")))
+(e/def ca-usrname (e/client (e/watch !ca-usrname)))
+#?(:cljs (def !ca-password (atom "")))
+(e/def ca-password (e/client (e/watch !ca-password)))
 #?(:cljs (def !online-user (atom "")))
 (e/def online-user (e/client (e/watch !online-user)))
+#?(:cljs (def !create-account-visible (atom false)))
+(e/def create-account-visible (e/client (e/watch !create-account-visible)))
+#?(:cljs (def !create-account-msg (atom "")))
+(e/def create-account-msg (e/client (e/watch !create-account-msg)))
 
 #?(:cljs (defn handle-response [response]
   (println response)
@@ -190,21 +199,29 @@
 
 (e/defn CreateAccountPart []
  (e/client
+  (if create-account-visible 
+   (do
   (dom/input (dom/props {:placeholder "username"})
                  (dom/on "change" (e/fn [e]
-                                     (reset! login-str (.-value dom/node) ))))
+                                     (reset! !ca-usrname (.-value dom/node) ))))
   (dom/input (dom/props {:placeholder "password" :type "password"})
                  (dom/on "change" (e/fn [e]
-                                     (reset! loginn-str (.-value dom/node) ))))
+                                     (reset! !ca-password (.-value dom/node) ))))
   (ui/button (e/fn []
+                 (e/client (reset! !create-account-msg "Account created"))
                  (e/server (e/discard  (e/offload  #(xt/submit-tx !xtdb [[:xtdb.api/put
     {:xt/id (random-uuid)
     :user/id (nid)
     :user/minted-at (System/currentTimeMillis)
-    :user/username ls
-    :user/password (hash-with :argon2 lpw)}]])))))
+    :user/username ca-usrname
+    :user/password (hash-with :argon2 ca-password)}]])))))
 
-      (dom/text "Create Account"))))
+      (dom/text "Create Account"))
+      (ui/button (e/fn [] (reset! !create-account-visible false)) (dom/text "✗")))
+      ;
+      ;else
+      (ui/button (e/fn [] (reset! !create-account-visible true)) (dom/text "create an account...")))
+      ))
 
 (e/defn Todo-list []
   (e/server (let [username-from-http-req (e/server (get-in e/*http-request* [:cookies "username" :value]))]
@@ -271,7 +288,10 @@
             (dom/hr)
 
               (dom/hr)
-              (CreateAccountPart.)
+              (if (not= "" create-account-msg) 
+               (dom/div (dom/text create-account-msg))
+               (if (empty? online-user)
+                 (CreateAccountPart.)))
               (dom/hr)
 
         )
@@ -294,7 +314,7 @@
           thumbnail (:item/thumbnail e)
           ] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
       (e/client
-        (dom/div (dom/props {:class "newsitem fi"})
+        (dom/div (dom/props {:class "newsitem fing"})
           (dom/div (dom/props {:class "fr"})
             (dom/img (dom/props {:class "fi" :src (str "img/" thumbnail)}))
             (dom/div (dom/props {:class "fi"})
@@ -310,14 +330,14 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text desc))
             (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id)))))))))
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn NewsItemCreate [] (e/client (InputSubmit. "link to add"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
     {:xt/id (random-uuid)
     :item/link v
     :item/id (nid)
-    :item/author "logged-in-user"
+    :item/minted-by online-user
     :item/minted-at (System/currentTimeMillis)}]]))))))))
 
 #?(:clj
@@ -355,7 +375,7 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text desc))
             (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id)))))))))
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn TribeCreate [] (e/client (InputSubmit. "new tribe name"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
@@ -395,7 +415,7 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text minted-by))
             (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id)))))))))
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn FeedbackCreate [] (e/client (InputSubmit. "feedback desc"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
@@ -436,7 +456,7 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text minted-by))
             (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text xt-id)))))))))
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn FeatureRequestCreate [] (e/client (InputSubmit. "Feature Request"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
