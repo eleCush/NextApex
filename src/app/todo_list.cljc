@@ -289,12 +289,12 @@
               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
             (TribeCreate.)
             (dom/hr)
-            (dom/div (dom/props {:class "feedbacklistc fc"})
-              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
+            ;(dom/div (dom/props {:class "feedbacklistc fc"})
+            ;  (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
             ;(FeedbackCreate.)
             (dom/hr)
-            (dom/div (dom/props {:class "featurerequestlistc fc"})
-              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
+            ;(dom/div (dom/props {:class "featurerequestlistc fc"})
+            ;  (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
             ;(FeatureRequestCreate.)
 
             (dom/hr)
@@ -326,7 +326,7 @@
           title (:item/title e) ;;hn style is (xor link desc)
           desc (:item/desc e)
           thumbnail (:item/thumbnail e)
-          upvotes (or (:item/upvotes e) 0)
+          upvotes (:item/upvotes e)
           time-since-minted (- e/system-time-ms item-minted-at)
           hrs-since-minted (/ time-since-minted 3600)
           gravity 1.5
@@ -346,8 +346,11 @@
               :item/id item-id
               :item/minted-by author
               :item/upvotes (inc upvotes)
+              ;:item/modified-at e/system-time-ms
               :item/score score
-              :item/minted-at (System/currentTimeMillis)}]]))))) (dom/text "+"))
+              :item/minted-at item-minted-at}]]))))) (dom/text "+"))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text upvotes))
             (dom/div (dom/props {:class "fi"})
              (dom/text link))
             (dom/div (dom/props {:class "fi"})
@@ -357,10 +360,11 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text item-minted-at))
             
-            (dom/div (dom/props {:class "fi"})
-             (dom/text title))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text desc))
+            ;; (dom/div (dom/props {:class "fi"})
+            ;;  (dom/text title))
+            ;; (dom/div (dom/props {:class "fi"})
+            ;;  (dom/text desc))
+            
             (dom/div (dom/props {:class "fi"})
              (dom/text time-since-minted))
             (dom/div (dom/props {:class "fi"})
@@ -374,15 +378,15 @@
     :item/link v
     :item/id (nid)
     :item/minted-by online-user
+    :item/upvotes 0
     :item/score 0
-    :item/minted-at (System/currentTimeMillis)}]]))))))))
+    :item/minted-at e/system-time-ms}]]))))))))
 
 #?(:clj
    (defn newsitem-records [db]
-     (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/title :item/desc :item/score])]
+     (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/title :item/desc :item/upvotes :item/score])]
                      :where [[?i :item/id]]})
        (map first)
-       ;(sort-by :item/minted-at)
        (sort-by :item/score >)
        vec)))
 
