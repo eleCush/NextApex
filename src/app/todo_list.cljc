@@ -260,7 +260,7 @@
                   (dom/text "Current Tribe: " current-tribe-view)
                   (ui/button (e/fn [] (reset! !view :tribes)) (dom/text "To Tribes List")))
                 (when (= :tribes view)
-                  (ui/button (e/fn [] (reset! !view :main)) (dom/text "Back to Main"))))
+                  (dom/text "Ocean")))
               (dom/div (dom/props {:class "fi"})
                 (dom/text current-tribe-view " chatroom")))
             (dom/div (dom/props {:class "fr"})
@@ -326,23 +326,45 @@
           title (:item/title e) ;;hn style is (xor link desc)
           desc (:item/desc e)
           thumbnail (:item/thumbnail e)
+          upvotes (or (:item/upvotes e) 0)
+          time-since-minted (- e/system-time-ms item-minted-at)
+          hrs-since-minted (/ time-since-minted 3600)
+          gravity 1.5
+          score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))
           ] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
       (e/client
         (dom/div (dom/props {:class "newsitem fing"})
           (dom/div (dom/props {:class "fr"})
             (dom/img (dom/props {:class "fi" :src (str "img/" thumbnail)}))
+            (ui/button (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+              [[:xtdb.api/put
+              {:xt/id xt-id
+              :item/link link
+              :item/title title
+              :item/desc desc
+              :item/thumbnail thumbnail
+              :item/id item-id
+              :item/minted-by author
+              :item/upvotes (inc upvotes)
+              :item/score score
+              :item/minted-at (System/currentTimeMillis)}]]))))) (dom/text "+"))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text link))
             (dom/div (dom/props {:class "fi"})
              (dom/text author))
             (dom/div (dom/props {:class "fi"})
              (dom/text item-id))
             (dom/div (dom/props {:class "fi"})
              (dom/text item-minted-at))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text link))
+            
             (dom/div (dom/props {:class "fi"})
              (dom/text title))
             (dom/div (dom/props {:class "fi"})
              (dom/text desc))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text time-since-minted))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text (.toFixed score 3)))
             (dom/div (dom/props {:class "fi"})
              (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
@@ -352,14 +374,16 @@
     :item/link v
     :item/id (nid)
     :item/minted-by online-user
+    :item/score 0
     :item/minted-at (System/currentTimeMillis)}]]))))))))
 
 #?(:clj
    (defn newsitem-records [db]
-     (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/title :item/desc])]
+     (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/title :item/desc :item/score])]
                      :where [[?i :item/id]]})
        (map first)
-       (sort-by :item/minted-at)
+       ;(sort-by :item/minted-at)
+       (sort-by :item/score >)
        vec)))
 
 (e/defn TribeItem [id]
