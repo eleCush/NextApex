@@ -291,11 +291,11 @@
             (dom/hr)
             (dom/div (dom/props {:class "feedbacklistc fc"})
               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
-            (FeedbackCreate.)
+            ;(FeedbackCreate.)
             (dom/hr)
             (dom/div (dom/props {:class "featurerequestlistc fc"})
               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
-            (FeatureRequestCreate.)
+            ;(FeatureRequestCreate.)
 
             (dom/hr)
             
@@ -431,93 +431,9 @@
        (sort-by :tribe/minted-at)
        vec)))
 
-(e/defn FeedbackItem [id]
-  (e/server
-    (let [e (xt/entity db id)
-          xt-id   (:xt/id e)
-          minted-by (:feedback/minted-by e)
-          feedback-minted-at (:feedback/minted-at e)
-          link (:feedback/link e)
-          mood (:feedback/mood e)
-          desc (:feedback/desc e)
-          ] 
-      (e/client
-        (dom/div (dom/props {:class "newsitem fi"})
-          (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi"})
-             (dom/text mood))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text desc))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text feedback-minted-at))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text minted-by))
-            (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
-
-(e/defn FeedbackCreate [] (e/client (InputSubmit. "feedback desc"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
-  [[:xtdb.api/put
-    {:xt/id (random-uuid)
-    :feedback/desc v
-    :feedback/id (nid)
-    :feedback/minted-by online-user
-    :feedback/mood "current-mood"
-    :feedback/minted-at (System/currentTimeMillis)}]]))))))))
-
-#?(:clj
-   (defn feedback-records [db]
-     (->> (xt/q db '{:find [(pull ?fb [:xt/id :feedback/desc :feedback/minted-by :feedback/id :feedback/minted-at])]
-                     :where [[?fb :feedback/id]]})
-       (map first)
-       (sort-by :feedback/minted-at)
-       vec)))
-
-(e/defn FeatureRequestItem [id]
-  (e/server
-    (let [e (xt/entity db id)
-          xt-id   (:xt/id e)
-          minted-by (:feedback/minted-by e)
-          feature-request-minted-at (:feature-request/minted-at e)
-          link (:feature-request/link e)
-          mood (:feature-request/mood e)
-          desc (:feature-request/desc e)
-          ] 
-      (e/client
-        (dom/div (dom/props {:class "newsitem fi"})
-          (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi"})
-             (dom/text mood))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text desc))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text feature-request-minted-at))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text minted-by))
-            (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
-
-(e/defn FeatureRequestCreate [] (e/client (InputSubmit. "Feature Request"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
-  [[:xtdb.api/put
-    {:xt/id (random-uuid)
-    :feature-request/desc v
-    :feature-request/id (nid)
-    :feature-request/minted-by online-user
-    :feature-request/mood "current-mood"
-    :feature-request/minted-at (System/currentTimeMillis)}]]))))))))
-
-#?(:clj
-   (defn feature-request-records [db]
-     (->> (xt/q db '{:find [(pull ?frq [:xt/id :feature-request/desc :feature-request/minted-by :feature-request/id :feature-request/minted-at])]
-                     :where [[?frq :feature-request/id]]})
-       (map first)
-       (sort-by :feature-request/minted-at)
-       vec)))
-
-
-
 
 ;;userList [ooo       ]
-;;itemsList [ooooo    ]
+;;itemsList [ooooo|$$|oo   ]
 ;;tribesList [ooooo   ]
 ;;feedbackList [ooooo ]
 ;;featureList [o      ]
@@ -526,9 +442,9 @@
 ;;login [oo           ]
 ;;
 
-;;oceanDisplay [ | | ]
+;;oceanDisplay [oo | | ]
 
-;;tribeDisplay [ | | ]
+;;tribeDisplay [ooo | | ]
 
 ;;tribe [curators: , observers: , topic, id#, membercount, max-member-count]
 
