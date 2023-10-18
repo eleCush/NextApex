@@ -175,6 +175,8 @@
 (e/def current-item-id (e/client (e/watch !current-item-id)))
 #?(:cljs (def !current-item-xt-id (atom "")))
 (e/def current-item-xt-id (e/client (e/watch !current-item-xt-id)))
+#?(:cljs (def !parent-reply-xt-id (atom [])))
+(e/def parent-reply-xt-id (e/client (e/watch !parent-reply-xt-id)))
 
 
 #?(:cljs (defn handle-response [response]
@@ -276,9 +278,9 @@
                               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id)))))
                   :main (Link-and-Chat-Extended. "placeholder-username"))))
             (dom/div (dom/props {:class "fr"})
-              (ItemView.))
+              (when current-item-xt-id (ItemView.)))
             (dom/div (dom/props {:class "fr"})
-              (ItemComments.))
+              (ItemReplies.))
             (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
                 (dom/text "currently 0 free slots in this tribe"))
@@ -424,6 +426,7 @@
   (e/server
     (let [e (xt/entity db current-item-xt-id)
           xt-id (:xt/id e)
+          item-xt-id xt-id
           link (:item/link e)
           item-id (:item/id e)
           author (:item/minted-by e)
@@ -439,28 +442,61 @@
           (dom/div (dom/props {:class "fi"})
             (dom/text item-id))
           (dom/div (dom/props {:class "fi"})
-            (dom/text minted-at)))))))
+            (dom/text minted-at)))
+        (when (not= current-item-xt-id "")
+          (dom/div (dom/props {:class "reply-input fc"})
+            (ReplyCreate. xt-id xt-id)))
+        (dom/div (dom/props {:class "replies fc"})
+          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-records db item-xt-id))] (ItemReplies. id))))))))
 
-(e/defn ItemComments []
+(e/defn ItemReplies [xt-id]
   (e/server
-    (let [e (xt/entity db current-item-xt-id)
-          xt-id (:xt/id e)
-          link (:item/link e)
-          item-id (:item/id e)
-          author (:item/minted-by e)
-          minted-at (:item/minted-at e)
-          ;;title, desc
+    (let [;i (xt/entity db current-item-xt-id)
+          r (xt/entity db xt-id)
+          text (:reply/text r)
+          author (:reply/minted-by r)
+          minted-at (:reply/minted-at r)
+          item-xt-id (:reply/item-xt-id r)
+          upvotes (:reply/upvotes r)
           ]
       (e/client
-        (dom/div (dom/props {:class "itemcomments fc"})
+        (dom/div (dom/props {:class "itemreplies fc"})
           (dom/div (dom/props {:class "fi"})
-            (dom/text link))
+            (dom/text text))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text xt-id))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text item-xt-id))
           (dom/div (dom/props {:class "fi"})
             (dom/text author))
           (dom/div (dom/props {:class "fi"})
-            (dom/text item-id))
+            (dom/text upvotes))
           (dom/div (dom/props {:class "fi"})
-            (dom/text minted-at)))))))
+            (dom/text minted-at))
+          (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))
+
+;;item == newsitem
+;;parent == parent
+(e/defn ReplyCreate [item-xt-id parent-xt-id] (e/client (InputSubmit. "reply"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+  [[:xtdb.api/put
+    {:xt/id (random-uuid)
+    :reply/text v
+    :reply/id (nid)
+    :reply/minted-by online-user
+    :reply/upvotes 0
+    :reply/item-xt-id item-xt-id
+    :reply/parent-xt-id (if parent-xt-id parent-xt-id item-xt-id)
+    :reply/minted-at (System/currentTimeMillis)}]]))))))))
+
+#?(:clj
+   (defn reply-records [db item-xt-id]
+     (->> (xt/q db '{:find [(pull ?r [:xt/id :reply/text :reply/item-xt-id :reply/parent-xt-id :reply/upvotes])]
+                     :where [[?r :reply/item-xt-id item-xt-id]]
+                     :in [item-xt-id]} item-xt-id)
+       (map first)
+       ;(sort-by #(get % :reply/upvotes))
+       vec)))
 
 
 ;;userList [oooooooooooo       ]
