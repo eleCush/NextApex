@@ -336,7 +336,7 @@
         (dom/div (dom/props {:class "newsitem fing"})
           (dom/div (dom/props {:class "fr"})
             (dom/img (dom/props {:class "fi" :src (str "img/" thumbnail)}))
-            (ui/button (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+            (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
               [[:xtdb.api/put
               {:xt/id xt-id
               :item/link link
