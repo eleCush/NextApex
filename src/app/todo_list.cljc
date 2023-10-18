@@ -6,6 +6,7 @@
             [hyperfiddle.electric-dom2 :as dom]
             [hyperfiddle.electric-ui4 :as ui]
             #?(:clj [cryptohash-clj.api :as ch :refer [hash-with verify-with]])
+            #?(:clj [clj-time.core :as time])
             #?(:cljs [cljs.core :refer [js->clj clj->js]])
             #?(:cljs [ajax.core :as ajax :refer [PUT POST]])
             #?(:clj [clj-http.client :as httpclient])
@@ -288,20 +289,20 @@
             (dom/div (dom/props {:class "tribelistc fc"})
               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
             (TribeCreate.)
-            (dom/hr)
+            ;(dom/hr)
             ;(dom/div (dom/props {:class "feedbacklistc fc"})
             ;  (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
             ;(FeedbackCreate.)
-            (dom/hr)
+            ;(dom/hr)
             ;(dom/div (dom/props {:class "featurerequestlistc fc"})
             ;  (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
             ;(FeatureRequestCreate.)
 
-            (dom/hr)
+            ;(dom/hr)
             
-            (dom/hr)
+            ;(dom/hr)
 
-              (dom/hr)
+              ;(dom/hr)
               (if (not= "" create-account-msg) 
                (dom/div (dom/text create-account-msg))
                (if (empty? online-user)
@@ -325,8 +326,7 @@
           link (:item/link e)
           title (:item/title e) ;;hn style is (xor link desc)
           desc (:item/desc e)
-          thumbnail (:item/thumbnail e)
-          upvotes (:item/upvotes e)
+          upvotes (or (:item/upvotes e) 0)
           time-since-minted (- e/system-time-ms item-minted-at)
           hrs-since-minted (/ time-since-minted 3600)
           gravity 1.5
@@ -335,22 +335,19 @@
       (e/client
         (dom/div (dom/props {:class "newsitem fing"})
           (dom/div (dom/props {:class "fr"})
-            (dom/img (dom/props {:class "fi" :src (str "img/" thumbnail)}))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text upvotes))
             (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
               [[:xtdb.api/put
               {:xt/id xt-id
               :item/link link
               :item/title title
               :item/desc desc
-              :item/thumbnail thumbnail
               :item/id item-id
               :item/minted-by author
               :item/upvotes (inc upvotes)
-              ;:item/modified-at e/system-time-ms
-              :item/score score
+              ;:item/score score
               :item/minted-at item-minted-at}]]))))) (dom/text "+"))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text upvotes))
             (dom/div (dom/props {:class "fi"})
              (dom/text link))
             (dom/div (dom/props {:class "fi"})
@@ -360,11 +357,9 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text item-minted-at))
             
-            ;; (dom/div (dom/props {:class "fi"})
-            ;;  (dom/text title))
-            ;; (dom/div (dom/props {:class "fi"})
-            ;;  (dom/text desc))
             
+            (dom/div (dom/props {:class "fi"})
+             (dom/text ""))
             (dom/div (dom/props {:class "fi"})
              (dom/text time-since-minted))
             (dom/div (dom/props {:class "fi"})
@@ -379,15 +374,17 @@
     :item/id (nid)
     :item/minted-by online-user
     :item/upvotes 0
-    :item/score 0
-    :item/minted-at e/system-time-ms}]]))))))))
+    :item/minted-at (System/currentTimeMillis)}]]))))))))
 
 #?(:clj
    (defn newsitem-records [db]
-     (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/title :item/desc :item/upvotes :item/score])]
+     (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes])]
                      :where [[?i :item/id]]})
        (map first)
-       (sort-by :item/score >)
+       ;(sort-by :item/minted-at)
+       ;(sort-by :item/score >)
+       ;(sort-by #(:item/upvotes %) >)
+       (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
        vec)))
 
 (e/defn TribeItem [id]
