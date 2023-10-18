@@ -171,6 +171,10 @@
 (e/def view (e/client (e/watch !view)))
 #?(:cljs (def !current-tribe-view (atom "ocean")))
 (e/def current-tribe-view (e/client (e/watch !current-tribe-view)))
+#?(:cljs (def !current-item-id (atom "")))
+(e/def current-item-id (e/client (e/watch !current-item-id)))
+#?(:cljs (def !current-item-xt-id (atom "")))
+(e/def current-item-xt-id (e/client (e/watch !current-item-xt-id)))
 
 
 #?(:cljs (defn handle-response [response]
@@ -226,8 +230,7 @@
       (ui/button (e/fn [] (reset! !create-account-visible false)) (dom/text "✗")))
       ;
       ;else
-      (ui/button (e/fn [] (reset! !create-account-visible true)) (dom/text "create an account...")))
-      ))
+      (ui/button (e/fn [] (reset! !create-account-visible true)) (dom/text "create an account...")))))
 
 (e/defn Todo-list []
   (e/server (let [username-from-http-req (e/server (get-in e/*http-request* [:cookies "username" :value]))]
@@ -251,28 +254,31 @@
                        :handler handle-logout-response}))
                     (dom/props {:class "ra"})
                     (dom/text "Logout"))
-                  (LoginPart.))
-              )
+                  (LoginPart.)))
             (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
-                (dom/text "17 people in this tribe"))
+                (dom/text (e/client current-item-id)))
               (dom/div (dom/props {:class "fi"})
-                (when (= :main view)
-                  (dom/text "Current Tribe: " current-tribe-view)
-                  (ui/button (e/fn [] (reset! !view :tribes)) (dom/text "To Tribes List")))
-                (when (= :tribes view)
-                  (dom/text "Ocean")))
+                (case view
+                  :main  (do
+                          (dom/text "Current Tribe: " current-tribe-view)
+                          (ui/button (e/fn [] (reset! !view :tribes)) (dom/text "To Tribes List")))
+                  :tribes (dom/text "Ocean")))
               (dom/div (dom/props {:class "fi"})
                 (dom/text current-tribe-view " chatroom")))
             (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
                 ;(dom/text "chatroom-goes-here")
-                (when (= :tribes view)
-                  (dom/div (dom/props {:class "tribelistc fc"})
-                    (ui/button (e/fn [] (reset! !view :main) (reset! !current-tribe-view "ocean")) (dom/text "To Ocean"))
-                    (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id)))))
-                (when (= :main view)
-                  (Link-and-Chat-Extended. "placeholder-username"))))
+                (case view
+                  :tribes (do
+                            (dom/div (dom/props {:class "tribelistc fc"})
+                              (ui/button (e/fn [] (reset! !view :main) (reset! !current-tribe-view "ocean")) (dom/text "To Ocean"))
+                              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id)))))
+                  :main (Link-and-Chat-Extended. "placeholder-username"))))
+            (dom/div (dom/props {:class "fr"})
+              (ItemView.))
+            (dom/div (dom/props {:class "fr"})
+              (ItemComments.))
             (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
                 (dom/text "currently 0 free slots in this tribe"))
@@ -283,26 +289,11 @@
             (dom/hr)
             (dom/div (dom/props {:class "userlistc fc"})
               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
-            
-
             (dom/hr)
             (dom/div (dom/props {:class "tribelistc fc"})
               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
             (TribeCreate.)
-            ;(dom/hr)
-            ;(dom/div (dom/props {:class "feedbacklistc fc"})
-            ;  (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feedback-records db))] (FeedbackItem. id))))
-            ;(FeedbackCreate.)
-            ;(dom/hr)
-            ;(dom/div (dom/props {:class "featurerequestlistc fc"})
-            ;  (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(feature-request-records db))] (FeatureRequestItem. id))))
-            ;(FeatureRequestCreate.)
-
-            ;(dom/hr)
-            
-            ;(dom/hr)
-
-              ;(dom/hr)
+              (dom/hr)
               (if (not= "" create-account-msg) 
                (dom/div (dom/text create-account-msg))
                (if (empty? online-user)
@@ -348,12 +339,12 @@
               :item/upvotes (inc upvotes)
               ;:item/score score
               :item/minted-at item-minted-at}]]))))) (dom/text "+"))
-            (dom/div (dom/props {:class "fi"})
+            (dom/div (dom/props {:class "fi fg"})
              (dom/text link))
             (dom/div (dom/props {:class "fi"})
              (dom/text author))
             (dom/div (dom/props {:class "fi"})
-             (dom/text item-id))
+             (ui/button (e/fn [] (reset! !current-item-id item-id) (reset! !current-item-xt-id xt-id)) (dom/text item-id)))
             (dom/div (dom/props {:class "fi"})
              (dom/text item-minted-at))
             
@@ -381,9 +372,6 @@
      (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes])]
                      :where [[?i :item/id]]})
        (map first)
-       ;(sort-by :item/minted-at)
-       ;(sort-by :item/score >)
-       ;(sort-by #(:item/upvotes %) >)
        (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
        vec)))
 
@@ -432,22 +420,62 @@
        (sort-by :tribe/minted-at)
        vec)))
 
+(e/defn ItemView []
+  (e/server
+    (let [e (xt/entity db current-item-xt-id)
+          xt-id (:xt/id e)
+          link (:item/link e)
+          item-id (:item/id e)
+          author (:item/minted-by e)
+          minted-at (:item/minted-at e)
+          ;;title, desc
+          ]
+      (e/client
+        (dom/div (dom/props {:class "itemview fc"})
+          (dom/div (dom/props {:class "fi"})
+            (dom/text link))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text author))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text item-id))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text minted-at)))))))
 
-;;userList [ooo       ]
-;;itemsList [ooooo|$$|oo   ]
+(e/defn ItemComments []
+  (e/server
+    (let [e (xt/entity db current-item-xt-id)
+          xt-id (:xt/id e)
+          link (:item/link e)
+          item-id (:item/id e)
+          author (:item/minted-by e)
+          minted-at (:item/minted-at e)
+          ;;title, desc
+          ]
+      (e/client
+        (dom/div (dom/props {:class "itemcomments fc"})
+          (dom/div (dom/props {:class "fi"})
+            (dom/text link))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text author))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text item-id))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text minted-at)))))))
+
+
+;;userList [oooooooooooo       ]
+;;itemsList [ooooo|$$|oo|oo|   ]
 ;;tribesList [ooooo   ]
-;;feedbackList [ooooo ]
-;;featureList [o      ]
+;;feedbackList [      ]
+;;featureList [       ]
 
-;;createAccount [oo   ]
-;;login [oo           ]
+;;createAccount [ooo  ]
+;;login [ooooooooooooo]
 ;;
 
-;;oceanDisplay [oo | | ]
+;;oceanDisplay [oo |oo | ]
 
-;;tribeDisplay [ooo | | ]
+;;tribeDisplay [ooo |oo | ]
 
 ;;tribe [curators: , observers: , topic, id#, membercount, max-member-count]
-
-;;
 
