@@ -141,6 +141,7 @@
        (map first)
        (sort-by :user/minted-at)
        vec)))
+#?(:clj (defn ensure-http-prefix [url] (if (.startsWith url "http://") url (str "http://" url))))
 
 ;;move between membranes with e/def (creates a new thing in the third layer accessible to both)
 #?(:cljs (def login-str (atom "")))
@@ -291,8 +292,7 @@
           time-since-minted (- e/system-time-ms item-minted-at)
           hrs-since-minted (/ time-since-minted 3600)
           gravity 1.5
-          score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))
-          ]
+          score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))]
       (e/client
         (dom/div (dom/props {:class "newsitem fing"})
           (dom/div (dom/props {:class "fr"})
@@ -321,13 +321,6 @@
             (dom/div (dom/props {:class "fi"})
              (when (= "R" online-user) 
               (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))))
-
-#?(:clj 
-  (defn ensure-http-prefix [url]
-    (if (.startsWith url "http://")
-      url
-      (str "http://" url))))
-
 
 (e/defn NewsItemCreate [] (e/client (InputSubmit. "link to add"  (e/fn [v] (e/server 
   (let [nid (nid)]
@@ -394,8 +387,7 @@
 
 (e/defn ItemReply [xt-id]
   (e/server
-    (let [;i (xt/entity db current-item-xt-id)
-          r (xt/entity db xt-id)
+    (let [r (xt/entity db xt-id)
           text (:reply/text r)
           author (:reply/minted-by r)
           minted-at (:reply/minted-at r)
@@ -419,8 +411,7 @@
 
 (e/defn ItemReplyB [xt-id]
   (e/server
-    (let [;i (xt/entity db current-item-xt-id)
-          r (xt/entity db xt-id)
+    (let [r (xt/entity db xt-id)
           text (:reply/text r)
           author (:reply/minted-by r)
           minted-at (:reply/minted-at r)
@@ -444,8 +435,7 @@
 
 (e/defn ItemReplyC [xt-id]
   (e/server
-    (let [;i (xt/entity db current-item-xt-id)
-          r (xt/entity db xt-id)
+    (let [r (xt/entity db xt-id)
           text (:reply/text r)
           author (:reply/minted-by r)
           minted-at (:reply/minted-at r)
@@ -469,8 +459,7 @@
 
 (e/defn ItemReplyD [xt-id]
   (e/server
-    (let [;i (xt/entity db current-item-xt-id)
-          r (xt/entity db xt-id)
+    (let [r (xt/entity db xt-id)
           text (:reply/text r)
           author (:reply/minted-by r)
           minted-at (:reply/minted-at r)
@@ -487,8 +476,6 @@
            (when (= "R" online-user) 
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
-;;item == newsitem
-;;parent == parent
 (e/defn ReplyCreate [item-xt-id parent-xt-id] 
   (e/client (when (and item-xt-id parent-xt-id) 
     (InputSubmit. "leave a comment"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
@@ -526,21 +513,3 @@
                      :in [item-xt-id parent-xt-id]} item-xt-id parent-xt-id)
        (map first)
        vec)))
-
-
-;;userList [oooooooooooo       ]
-;;itemsList [ooooo|$$|oo|oo|   ]
-;;tribesList [ooooo   ]
-;;feedbackList [      ]
-;;featureList [       ]
-
-;;createAccount [ooo  ]
-;;login [ooooooooooooo]
-;;
-
-;;oceanDisplay [oo |oo | ]
-
-;;tribeDisplay [ooo |oo | ]
-
-;;tribe [curators: , observers: , topic, id#, membercount, max-member-count]
-
