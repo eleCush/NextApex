@@ -84,8 +84,15 @@ label::first-letter{
 .bigc {width: 80%; left: 59.5%; margin-left: -50%; position: absolute;}
 .ra {position: absolute; right: 8px;}
 
-.itemview {width: 100%;}
 
 .t {display: table;}
 .tr {display: table-row; border: 1px solid black; padding: 4px;}
 .td {display: table-cell; border: 1px solid black; padding: 4px;}
+
+.oo {display: block; width: 100%; border: 1px solid orange;}
+
+.in1 {margin-left: 1em;}
+.in2 {margin-left: 2em;}
+.in3 {margin-left: 3em;}
+.in4 {margin-left: 4em;}
+.in5 {margin-left: 5em;}

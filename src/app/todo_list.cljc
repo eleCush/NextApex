@@ -418,20 +418,19 @@
           author (:item/minted-by e)
           minted-at (:item/minted-at e)]
       (e/client
-        (dom/div (dom/props {:class "itemview fr"})
+        (dom/div (dom/props {:class "itemview oo"})
           (dom/div (dom/props {:class "fi"})
             (dom/text link))
           (dom/div (dom/props {:class "fi"})
             (dom/text author))
           (dom/div (dom/props {:class "reply-input fi"})
             (ReplyCreate. xt-id xt-id))
-        (dom/div (dom/props {:class "replies fr"})
+        (dom/div (dom/props {:class "replies"})
           (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemNestedReplies. id)))))))))
 
 (e/defn ItemNestedReplies [xt-id]
   (e/server
-    (let [;i (xt/entity db current-item-xt-id)
-          r (xt/entity db xt-id)
+    (let [r (xt/entity db xt-id)
           text (:reply/text r)
           author (:reply/minted-by r)
           minted-at (:reply/minted-at r)
@@ -439,27 +438,17 @@
           upvotes (:reply/upvotes r)
           parent (:reply/parent-xt-id r)]
       (e/client
-        (dom/div (dom/props {:class "itemreplies tr"})
-          (dom/div (dom/props {:class "td"})
+        (dom/div (dom/props {:class "itemreplies oo in1"})
+          (dom/div (dom/props {:class ""})
             (dom/text text))
-          ;; (dom/div (dom/props {:class "fi"})
-          ;;   (dom/text "xt-id: " xt-id))
-          ;; (dom/div (dom/props {:class "fi"})
-          ;;   (dom/text "item: " item-xt-id))
-          ;; (dom/div (dom/props {:class "fi"})
-          ;;   (dom/text "parent: " parent))
-          (dom/div (dom/props {:class "td"})
+          (dom/div (dom/props {:class ""})
             (dom/text author))
-          ;; (dom/div (dom/props {:class "fi"})
-          ;;   (dom/text upvotes))
-          ;; (dom/div (dom/props {:class "fi"})
-          ;;   (dom/text minted-at))
-          (dom/div (dom/props {:class "td"})
+          (dom/div (dom/props {:class ""})
             (NestedReplyCreate. current-item-xt-id xt-id))
-           (dom/div (dom/props {:class "td"})
-             (dom/div (dom/props {:class "replies td"})
+           (dom/div (dom/props {:class ""})
+             (dom/div (dom/props {:class "replies"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReply. id)))))
-          (dom/div (dom/props {:class "td"})
+          (dom/div (dom/props {:class ""})
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))
 
 (e/defn ItemReply [xt-id]
@@ -473,17 +462,17 @@
           upvotes (:reply/upvotes r)
           parent (:reply/parent-xt-id r)]
       (e/client
-        (dom/div (dom/props {:class "itemreplies tr"})
-          (dom/div (dom/props {:class "td"})
+        (dom/div (dom/props {:class "itemreplies oo in2"})
+          (dom/div (dom/props {:class "fi"})
             (dom/text text))
-          (dom/div (dom/props {:class "td"})
+          (dom/div (dom/props {:class "fi"})
             (dom/text author))
-          (dom/div (dom/props {:class "td"})
+          (dom/div (dom/props {:class "fi"})
             (NestedReplyCreate. current-item-xt-id xt-id))
-          (dom/div (dom/props {:class "td"})
-             (dom/div (dom/props {:class "replies td"})
+          (dom/div (dom/props {:class "fi"})
+             (dom/div (dom/props {:class "replies fr"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyB. id)))))
-          (dom/div (dom/props {:class "td"})
+          (dom/div (dom/props {:class "fi"})
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))
 
 (e/defn ItemReplyB [xt-id]
@@ -497,7 +486,7 @@
           upvotes (:reply/upvotes r)
           parent (:reply/parent-xt-id r)]
       (e/client
-        (dom/div (dom/props {:class "itemreplies fr"})
+        (dom/div (dom/props {:class "itemreplies oo in3"})
          (dom/div (dom/props {:class "fc"})
           (dom/div (dom/props {:class "fi"})
             (dom/text text))
@@ -522,7 +511,7 @@
           upvotes (:reply/upvotes r)
           parent (:reply/parent-xt-id r)]
       (e/client
-        (dom/div (dom/props {:class "itemreplies fr"})
+        (dom/div (dom/props {:class "itemreplies oo in4"})
          (dom/div (dom/props {:class "fc"})
           (dom/div (dom/props {:class "fi"})
             (dom/text text))
@@ -547,7 +536,7 @@
           upvotes (:reply/upvotes r)
           parent (:reply/parent-xt-id r)]
       (e/client
-        (dom/div (dom/props {:class "itemreplies fr"})
+        (dom/div (dom/props {:class "itemreplies oo in5"})
          (dom/div (dom/props {:class "fc"})
           (dom/div (dom/props {:class "fi"})
             (dom/text text))
