@@ -260,7 +260,7 @@
                 (case view
                   :main  (do
                           (dom/text "Current Tribe: " current-tribe-view)
-                          (ui/button (e/fn [] (reset! !view :tribes)) (dom/text "To Tribes List")))
+                          (ui/button (e/fn [] (reset! !view :tribes) (reset! !current-item-xt-id nil)) (dom/text "To Tribes List")))
                   :tribes (dom/text "Ocean")))
               (dom/div (dom/props {:class "fi"})
                 (dom/text current-tribe-view " chatroom")))
@@ -540,6 +540,8 @@
          (dom/div (dom/props {:class "fc"})
           (dom/div (dom/props {:class "fi"})
             (dom/text text))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text author))
           (dom/div (dom/props {:class "fi"})
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 

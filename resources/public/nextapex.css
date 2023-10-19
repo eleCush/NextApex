@@ -77,22 +77,20 @@ label::first-letter{
 .fc {display: flex; flex-direction: column;}
 .fi {display: flex; flex-grow: 1;}
 
-.fi, .fr, .fc {border: 1px solid rebeccapurple;}
+.fi, .fr, .fc {border: 1px dotted rebeccapurple;}
 .fi {padding: 4px;}
 .fing {display: flex; flex-grow: 0;}
 
 .bigc {width: 80%; left: 59.5%; margin-left: -50%; position: absolute;}
 .ra {position: absolute; right: 8px;}
 
-
-.t {display: table;}
-.tr {display: table-row; border: 1px solid black; padding: 4px;}
-.td {display: table-cell; border: 1px solid black; padding: 4px;}
-
-.oo {display: block; width: 100%; border: 1px solid orange;}
+.oo {display: block; width: 100%; border: 0px solid orange;}
 
 .in1 {margin-left: 1em;}
 .in2 {margin-left: 2em;}
 .in3 {margin-left: 3em;}
 .in4 {margin-left: 4em;}
 .in5 {margin-left: 5em;}
+
+.itemview {overflow: hidden;}
+.itemreplies {overflow: hidden;}
