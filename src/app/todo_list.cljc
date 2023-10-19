@@ -280,8 +280,6 @@
             (dom/div (dom/props {:class "fr"})
               (when current-item-xt-id (ItemView.)))
             (dom/div (dom/props {:class "fr"})
-              (ItemNestedReplies. current-item-xt-id))
-            (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
                 (dom/text "currently 0 free slots in this tribe"))
               (dom/div (dom/props {:class "fi"})
@@ -430,9 +428,7 @@
           link (:item/link e)
           item-id (:item/id e)
           author (:item/minted-by e)
-          minted-at (:item/minted-at e)
-          ;;title, desc
-          ]
+          minted-at (:item/minted-at e)]
       (e/client
         (dom/div (dom/props {:class "itemview fc"})
           (dom/div (dom/props {:class "fi"})
@@ -442,12 +438,12 @@
           (dom/div (dom/props {:class "fi"})
             (dom/text item-id))
           (dom/div (dom/props {:class "fi"})
-            (dom/text minted-at)))
+            (dom/text minted-at))
         (when (not= current-item-xt-id "")
-          (dom/div (dom/props {:class "reply-input fc"})
+          (dom/div (dom/props {:class "reply-input fi"})
             (ReplyCreate. xt-id xt-id)))
-        (dom/div (dom/props {:class "replies fc"})
-          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemNestedReplies. id))))))))
+        (dom/div (dom/props {:class "replies fr"})
+          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemNestedReplies. id)))))))))
 
 (e/defn ItemNestedReplies [xt-id]
   (e/server
@@ -458,10 +454,10 @@
           minted-at (:reply/minted-at r)
           item-xt-id (:reply/item-xt-id r)
           upvotes (:reply/upvotes r)
-          parent (:reply/parent-xt-id r)
-          ]
+          parent (:reply/parent-xt-id r)]
       (e/client
-        (dom/div (dom/props {:class "itemreplies fc"})
+        (dom/div (dom/props {:class "itemreplies fr"})
+         (dom/div (dom/props {:class "fc"})
           (dom/div (dom/props {:class "fi"})
             (dom/text text))
           (dom/div (dom/props {:class "fi"})
@@ -482,7 +478,7 @@
              (dom/div (dom/props {:class "replies fc"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (e/client (dom/div (dom/text id))))))) ;(ItemNestedReplies. id)))))
           (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))
+             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 ;;item == newsitem
 ;;parent == parent
@@ -497,7 +493,7 @@
     :reply/parent-xt-id parent-xt-id
     :reply/minted-at (System/currentTimeMillis)}]]))))))))
 
-(e/defn NestedReplyCreate [item-xt-id parent-xt-id] (e/client (InputSubmit. "nested reply"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+(e/defn NestedReplyCreate [item-xt-id parent-xt-id] (e/client (when (and item-xt-id parent-xt-id) (InputSubmit. "nested reply"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
   [[:xtdb.api/put
     {:xt/id (random-uuid)
     :reply/text v
@@ -506,17 +502,7 @@
     :reply/upvotes 0
     :reply/item-xt-id item-xt-id
     :reply/parent-xt-id parent-xt-id
-    :reply/minted-at (System/currentTimeMillis)}]]))))))))
-
-
-#?(:clj
-   (defn reply-records [db item-xt-id]
-     (->> (xt/q db '{:find [(pull ?r [:xt/id :reply/text :reply/item-xt-id :reply/parent-xt-id :reply/upvotes])]
-                     :where [[?r :reply/item-xt-id item-xt-id]]
-                     :in [item-xt-id]} item-xt-id)
-       (map first)
-       ;(sort-by #(get % :reply/upvotes))
-       vec)))
+    :reply/minted-at (System/currentTimeMillis)}]])))))))))
 
 #?(:clj
    (defn reply-with-descendant-records [db item-xt-id parent-xt-id]
