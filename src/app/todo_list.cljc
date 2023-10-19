@@ -476,7 +476,37 @@
             (NestedReplyCreate. current-item-xt-id xt-id))
            (dom/div (dom/props {:class "fi"})
              (dom/div (dom/props {:class "replies fc"})
-               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (e/client (dom/div (dom/text id))))))) ;(ItemNestedReplies. id)))))
+               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReply. id)))))
+          (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
+
+(e/defn ItemReply [xt-id]
+  (e/server
+    (let [;i (xt/entity db current-item-xt-id)
+          r (xt/entity db xt-id)
+          text (:reply/text r)
+          author (:reply/minted-by r)
+          minted-at (:reply/minted-at r)
+          item-xt-id (:reply/item-xt-id r)
+          upvotes (:reply/upvotes r)
+          parent (:reply/parent-xt-id r)]
+      (e/client
+        (dom/div (dom/props {:class "itemreplies fr"})
+         (dom/div (dom/props {:class "fc"})
+          (dom/div (dom/props {:class "fi"})
+            (dom/text text))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text "xt-id: " xt-id))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text "item: " item-xt-id))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text "parent: " parent))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text author))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text upvotes))
+          (dom/div (dom/props {:class "fi"})
+            (dom/text minted-at))
           (dom/div (dom/props {:class "fi"})
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
