@@ -23,6 +23,9 @@
 
 #?(:cljs (defn set-scroll-position [x y] (.scrollTo js/window x y)))
 #?(:cljs (defn open-url [url] (.open js/window url)))
+#?(:cljs (defn get-current-path [] (.-pathname js/location)))
+#?(:cljs (defn replace-state [state title url] (.replaceState js/history state title url)))
+#?(:cljs (defn update-url [url] (replace-state nil "" url)))
 
 (defn nid
   "Mints a new nid."
@@ -49,8 +52,8 @@
                  (dom/li (dom/props {:class "fi"}) (dom/text username))))))
     (dom/hr)
     (dom/div (dom/props {:class "newsitemlistc fc"})
-          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id)))
-    (dom/div (dom/props {:class "fing"}) (when (not= "" online-user) (NewsItemCreate.))))
+        (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id)))
+        (when (not= "" online-user) (NewsItemCreate.))))
     (dom/hr)
     (dom/ul (dom/props {:class "fc"})
      (e/server
@@ -72,7 +75,7 @@
                                                       (take 9 %)))
                                   ;;(add-event-notif :new-global-chat-msg (. System (currentTimeMillis)))
                                   )
-                                 (set! (.-value dom/node) "")))))))))))
+                                 (set! (.-value dom/node) ""))))))))))
 
 (e/defn Link-and-Chat-Extended []
   (e/client
@@ -97,17 +100,6 @@
                                        (when-some [v (contrib.str/empty->nil (-> e .-target .-value))]
                                          (new F v)
                                          (set! (.-value dom/node) "")))))))));)
-
-(e/defn AdminInputSubmit [ph F]
-  ; Custom input control using lower dom interface for Enter handling
-     (e/client
-      (if (= "v1nc3ntpull1ng@gmail.com" (e/server (get-in e/*http-request* [:cookies "useremail" :value])))
-        (dom/input (dom/props {:placeholder (or ph "")})
-                  (dom/on "keydown" (e/fn [e]
-                                      (when (= "Enter" (.-key e))
-                                        (when-some [v (contrib.str/empty->nil (-> e .-target .-value))]
-                                          (new F v)
-                                          (set! (.-value dom/node) "")))))))))
 
 (e/defn UserItem [id]
   (e/server
@@ -138,7 +130,8 @@
             (dom/div (dom/props {:class "fi"})
              (dom/text (subs pw 21 32)))
             (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))
+             (when (= "R" online-user) 
+              (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))
              )))))))
 
 #?(:clj
@@ -237,7 +230,7 @@
         (e/client
           (if (some? username-from-http-req) (reset! !online-user username-from-http-req)) ;;check session, set cljs var
           (dom/div (dom/props {:class "bigc"})
-            (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fr hdr"})
               (dom/div (dom/props {:class "fi"})
                 (dom/text "NextApex"))
               (dom/div (dom/props {:class "fi"})
@@ -259,8 +252,7 @@
               (dom/div (dom/props {:class "fi"})
                 (case view
                   :main  (do
-                          (dom/text "Current Tribe: " current-tribe-view)
-                          (ui/button (e/fn [] (reset! !view :tribes) (reset! !current-item-xt-id nil)) (dom/text "To Tribes List")))
+                          (dom/text "Current Tribe: " current-tribe-view))
                   :tribes (dom/text "Ocean")))
               (dom/div (dom/props {:class "fi"})
                 (dom/text current-tribe-view " chatroom")))
@@ -268,33 +260,22 @@
               (dom/div (dom/props {:class "fi"})
                 ;(dom/text "chatroom-goes-here")
                 (case view
-                  :tribes (do
-                            (dom/div (dom/props {:class "tribelistc fc"})
-                              (ui/button (e/fn [] (reset! !view :main) (reset! !current-tribe-view "ocean")) (dom/text "To Ocean"))
-                              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id)))))
+                  
                   :main (Link-and-Chat-Extended. "placeholder-username"))))
             (dom/div (dom/props {:class "fr"})
+              (reset! !current-item-xt-id (subs (get-current-path) 1))
               (when current-item-xt-id (ItemView.)))
-            (dom/div (dom/props {:class "fr"})
-              (dom/div (dom/props {:class "fi"})
-                (dom/text "currently 0 free slots in this tribe"))
-              (dom/div (dom/props {:class "fi"})
-                (dom/text "join waitlist (5 people so far)")))
             (dom/h1 (dom/text "welcome to NextApex.co"))
             (dom/p (dom/text "realtime link share"))
             (dom/hr)
             (dom/div (dom/props {:class "userlistc fc"})
               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
             (dom/hr)
-            (dom/div (dom/props {:class "tribelistc fc"})
-              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
-            (TribeCreate.)
-              (dom/hr)
-              (if (not= "" create-account-msg) 
-               (dom/div (dom/text create-account-msg))
-               (if (empty? online-user)
-                 (CreateAccountPart.)))
-              (dom/hr)))))))
+            (if (not= "" create-account-msg) 
+              (dom/div (dom/text create-account-msg))
+              (if (empty? online-user)
+                (CreateAccountPart.)))
+            (dom/hr)))))))
 
 (e/defn NewsItem [id]
   (e/server
@@ -327,33 +308,37 @@
               :item/minted-by author
               :item/upvotes (inc upvotes)
               :item/minted-at item-minted-at}]]))))) (dom/text "+"))
-            (dom/div (dom/props {:class "fi fg"})
+            (dom/div (dom/props {:class "fi fg bb"})
              (dom/text link))
             (dom/div (dom/props {:class "fi"})
-             (dom/text author))
+             (dom/text "By:" author))
             (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [] (reset! !current-item-id item-id) (reset! !current-item-xt-id xt-id)) (dom/text item-id)))
+             (dom/text "⧖ " time-since-minted))
             (dom/div (dom/props {:class "fi"})
-             (dom/text item-minted-at))
-            
-            
+             (dom/text "↑ " (.toFixed score 3)))
             (dom/div (dom/props {:class "fi"})
-             (dom/text ""))
+             (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url item-id) (reset! !current-item-xt-id xt-id)) (dom/text "discuss")))
             (dom/div (dom/props {:class "fi"})
-             (dom/text time-since-minted))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text (.toFixed score 3)))
-            (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
+             (when (= "R" online-user) 
+              (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))))
 
-(e/defn NewsItemCreate [] (e/client (InputSubmit. "link to add"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
-  [[:xtdb.api/put
-    {:xt/id (random-uuid)
-    :item/link v
-    :item/id (nid)
-    :item/minted-by online-user
-    :item/upvotes 0
-    :item/minted-at (System/currentTimeMillis)}]]))))))))
+#?(:clj 
+  (defn ensure-http-prefix [url]
+    (if (.startsWith url "http://")
+      url
+      (str "http://" url))))
+
+
+(e/defn NewsItemCreate [] (e/client (InputSubmit. "link to add"  (e/fn [v] (e/server 
+  (let [nid (nid)]
+    (e/discard (e/offload #(xt/submit-tx !xtdb 
+    [[:xtdb.api/put
+      {:xt/id nid
+      :item/link (ensure-http-prefix v)
+      :item/id nid
+      :item/minted-by online-user
+      :item/upvotes 0
+      :item/minted-at (System/currentTimeMillis)}]])))))))))
 
 #?(:clj
    (defn newsitem-records [db]
@@ -361,51 +346,6 @@
                      :where [[?i :item/id]]})
        (map first)
        (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
-       vec)))
-
-(e/defn TribeItem [id]
-  (e/server
-    (let [e (xt/entity db id)
-          xt-id   (:xt/id e)
-          creator (:tribe/minted-by e)
-          tribe-id (:tribe/id e)
-          tribe-minted-at (:tribe/minted-at e)
-          link (:tribe/link e)
-          title (:tribe/title e) ;;hn style is (xor link desc)
-          desc (:tribe/desc e)
-          ] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
-      (e/client
-        (dom/div (dom/props {:class "newsitem fi"})
-          (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi"})
-             (dom/text creator))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text tribe-id))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text tribe-minted-at))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text link))
-            (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [] (reset! !current-tribe-view title) (reset! !view :main)) (dom/text title)))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text desc))
-            (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
-
-(e/defn TribeCreate [] (e/client (InputSubmit. "new tribe name"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
-  [[:xtdb.api/put
-    {:xt/id (random-uuid)
-    :tribe/title v
-    :tribe/id (nid)
-    :tribe/minted-by online-user
-    :tribe/minted-at (System/currentTimeMillis)}]]))))))))
-
-#?(:clj
-   (defn tribe-records [db]
-     (->> (xt/q db '{:find [(pull ?t [:xt/id :tribe/minted-by :tribe/id :tribe/minted-at :tribe/title :tribe/members])]
-                     :where [[?t :tribe/id]]})
-       (map first)
-       (sort-by :tribe/minted-at)
        vec)))
 
 (e/defn ItemView []
@@ -420,9 +360,9 @@
       (e/client
         (dom/div (dom/props {:class "itemview oo"})
           (dom/div (dom/props {:class "fi"})
-            (dom/text link))
+            (dom/span (dom/text "Current link: ")) (dom/a (dom/props {:href link}) (dom/text link)))
           (dom/div (dom/props {:class "fi"})
-            (dom/text author))
+            (dom/text "Author: " author))
           (dom/div (dom/props {:class "reply-input fi"})
             (ReplyCreate. xt-id xt-id))
         (dom/div (dom/props {:class "replies"})
@@ -436,20 +376,21 @@
           minted-at (:reply/minted-at r)
           item-xt-id (:reply/item-xt-id r)
           upvotes (:reply/upvotes r)
-          parent (:reply/parent-xt-id r)]
-      (e/client
-        (dom/div (dom/props {:class "itemreplies oo in1"})
-          (dom/div (dom/props {:class ""})
-            (dom/text text))
-          (dom/div (dom/props {:class ""})
-            (dom/text author))
-          (dom/div (dom/props {:class ""})
-            (NestedReplyCreate. current-item-xt-id xt-id))
-           (dom/div (dom/props {:class ""})
-             (dom/div (dom/props {:class "replies"})
-               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReply. id)))))
-          (dom/div (dom/props {:class ""})
-             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))
+          parent (:reply/parent-xt-id r)
+          replies (e/offload #(reply-with-descendant-records db item-xt-id xt-id))]
+        (e/client
+          (dom/div (dom/props {:class "itemreplies oo in1"})
+            (dom/div (dom/props {:class ""})
+              (dom/text text))
+            (dom/div (dom/props {:class ""})
+              (dom/text author))
+            (dom/div (dom/props {:class ""})
+              (NestedReplyCreate. current-item-xt-id xt-id))        
+            (dom/div (dom/props {:class "replies"})
+              (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (ItemReply. id)))))
+            (dom/div (dom/props {:class ""})
+             (when (= "R" online-user) 
+              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))
 
 (e/defn ItemReply [xt-id]
   (e/server
@@ -463,17 +404,18 @@
           parent (:reply/parent-xt-id r)]
       (e/client
         (dom/div (dom/props {:class "itemreplies oo in2"})
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (dom/text text))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (dom/text author))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (NestedReplyCreate. current-item-xt-id xt-id))
-          (dom/div (dom/props {:class "fi"})
-             (dom/div (dom/props {:class "replies fr"})
+          (dom/div (dom/props {:class ""})
+             (dom/div (dom/props {:class "replies "})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyB. id)))))
-          (dom/div (dom/props {:class "fi"})
-             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))
+          (dom/div (dom/props {:class ""})
+           (when (= "R" online-user) 
+             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn ItemReplyB [xt-id]
   (e/server
@@ -487,17 +429,17 @@
           parent (:reply/parent-xt-id r)]
       (e/client
         (dom/div (dom/props {:class "itemreplies oo in3"})
-         (dom/div (dom/props {:class "fc"})
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (dom/text text))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (dom/text author))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (NestedReplyCreate. current-item-xt-id xt-id))
-           (dom/div (dom/props {:class "fi"})
-             (dom/div (dom/props {:class "replies fc"})
+           (dom/div (dom/props {:class ""})
+             (dom/div (dom/props {:class "replies"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyC. id)))))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
+           (when (= "R" online-user) 
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn ItemReplyC [xt-id]
@@ -512,17 +454,17 @@
           parent (:reply/parent-xt-id r)]
       (e/client
         (dom/div (dom/props {:class "itemreplies oo in4"})
-         (dom/div (dom/props {:class "fc"})
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (dom/text text))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (dom/text author))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (NestedReplyCreate. current-item-xt-id xt-id))
-           (dom/div (dom/props {:class "fi"})
-             (dom/div (dom/props {:class "replies fc"})
+           (dom/div (dom/props {:class ""})
+             (dom/div (dom/props {:class "replies"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyD. id)))))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
+           (when (= "R" online-user) 
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn ItemReplyD [xt-id]
@@ -537,37 +479,44 @@
           parent (:reply/parent-xt-id r)]
       (e/client
         (dom/div (dom/props {:class "itemreplies oo in5"})
-         (dom/div (dom/props {:class "fc"})
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (dom/text text))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
             (dom/text author))
-          (dom/div (dom/props {:class "fi"})
+          (dom/div (dom/props {:class ""})
+           (when (= "R" online-user) 
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 ;;item == newsitem
 ;;parent == parent
-(e/defn ReplyCreate [item-xt-id parent-xt-id] (e/client (InputSubmit. "reply"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
-  [[:xtdb.api/put
-    {:xt/id (random-uuid)
-    :reply/text v
-    :reply/id (nid)
-    :reply/minted-by online-user
-    :reply/upvotes 0
-    :reply/item-xt-id item-xt-id
-    :reply/parent-xt-id parent-xt-id
-    :reply/minted-at (System/currentTimeMillis)}]]))))))))
+(e/defn ReplyCreate [item-xt-id parent-xt-id] 
+  (e/client (when (and item-xt-id parent-xt-id) 
+    (InputSubmit. "leave a comment"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+      [[:xtdb.api/put
+        {:xt/id (random-uuid)
+        :reply/text v
+        :reply/id (nid)
+        :reply/minted-by online-user
+        :reply/upvotes 0
+        :reply/item-xt-id item-xt-id
+        :reply/parent-xt-id parent-xt-id
+        :reply/minted-at (System/currentTimeMillis)}]])))))))))
 
-(e/defn NestedReplyCreate [item-xt-id parent-xt-id] (e/client (when (and item-xt-id parent-xt-id) (InputSubmit. "nested reply"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
-  [[:xtdb.api/put
-    {:xt/id (random-uuid)
-    :reply/text v
-    :reply/id (nid)
-    :reply/minted-by online-user
-    :reply/upvotes 0
-    :reply/item-xt-id item-xt-id
-    :reply/parent-xt-id parent-xt-id
-    :reply/minted-at (System/currentTimeMillis)}]])))))))))
+(e/defn NestedReplyCreate [item-xt-id parent-xt-id] 
+  (let [masked (atom true)]
+    (e/client (when (and item-xt-id parent-xt-id) 
+      (if (e/watch masked)
+        (ui/button (e/fn [] (reset! masked false)) (dom/text "reply"))
+        (InputSubmit. "nested reply"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+      [[:xtdb.api/put
+        {:xt/id (random-uuid)
+        :reply/text v
+        :reply/id (nid)
+        :reply/minted-by online-user
+        :reply/upvotes 0
+        :reply/item-xt-id item-xt-id
+        :reply/parent-xt-id parent-xt-id
+        :reply/minted-at (System/currentTimeMillis)}]])))))))))))
 
 #?(:clj
    (defn reply-with-descendant-records [db item-xt-id parent-xt-id]

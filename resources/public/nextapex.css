@@ -73,14 +73,17 @@ label::first-letter{
 
 .useritem, .newsitemlistc {background-color: #fff;}
 .b {font-weight: bold;}
-.fr {display: flex; flex-direction: row;}
+.fr {display: flex; flex-direction: row; width: 100%;}
 .fc {display: flex; flex-direction: column;}
 .fi {display: flex; flex-grow: 1;}
+.fg {display: flex; flex-grow: 1;}
 
-.fi, .fr, .fc {border: 1px dotted rebeccapurple;}
+.fr, .fc {border: 0px solid rebeccapurple;}
+.fi {border: 1px solid rebeccapurple;}
 .fi {padding: 4px;}
 .fing {display: flex; flex-grow: 0;}
 
+.hdr {background-color: hsl(254, 55%, 35%); color: #fff;}
 .bigc {width: 80%; left: 59.5%; margin-left: -50%; position: absolute;}
 .ra {position: absolute; right: 8px;}
 
@@ -92,5 +95,11 @@ label::first-letter{
 .in4 {margin-left: 4em;}
 .in5 {margin-left: 5em;}
 
-.itemview {overflow: hidden;}
-.itemreplies {overflow: hidden;}
+.itemview {overflow: hidden; background-color:hsla(0, 0%, 100%, 0.7);}
+.itemreplies {overflow: hidden; background-color: hsla(48, 83%, 98%, 0.4); border-radius: .1em;}
+
+.ll {float: left;}
+.rr {float: right;}
+.bb {font-weight: bold;}
+.reply-input > input {width: 100%;}
+button {font-size: 0.5em;}
