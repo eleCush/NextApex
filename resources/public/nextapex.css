@@ -14,10 +14,14 @@ body{
     background-color: rgb(38, 208, 129);
     background-color: hsl(152, 69.1%, 48.2%);
     background-color: hsl(159, 100%, 74%);
+    background-color: hsl(250, 9%, 13%); color: #fff;
     margin: 0;
     overflow-y: scroll;
     overflow-x: hidden;
 }
+a:link {color:rgb(56, 198, 211);}
+a:visited {color:rgb(22, 203, 219);}
+a:hover {color:rgb(22, 219, 163);}
 
 input[type="text"]{
     padding: 0.5rem;
@@ -71,7 +75,9 @@ label::first-letter{
     font-size: 1.25rem;
 }
 
-.useritem, .newsitemlistc {background-color: #fff;}
+.useritem, .newsitemlistc {background-color: hsl(254, 55%, 35%); color: #fff;
+    background-color: hsl(250, 9%, 13%); color: #fff;}
+.newsitemlistc {width: 100%;}
 .b {font-weight: bold;}
 .fr {display: flex; flex-direction: row; width: 100%;}
 .fc {display: flex; flex-direction: column;}
@@ -95,11 +101,15 @@ label::first-letter{
 .in4 {margin-left: 4em;}
 .in5 {margin-left: 5em;}
 
-.itemview {overflow: hidden; background-color:hsla(0, 0%, 100%, 0.7);}
-.itemreplies {overflow: hidden; background-color: hsla(48, 83%, 98%, 0.4); border-radius: .1em;}
+.itemview {overflow: hidden; background-color:hsla(0, 0%, 5%, 0.7);}
+.itemreplies {overflow: hidden; background-color: hsla(48, 83%, 8%, 0.4); border-radius: .1em;}
 
 .ll {float: left;}
 .rr {float: right;}
 .bb {font-weight: bold;}
 .reply-input > input {width: 100%;}
 button {font-size: 0.5em;}
+
+.w {flex: 0;}
+.ww {flex: 0; flex-basis: 1em;}
+.www {flex: 0; flex-basis: 6em;}

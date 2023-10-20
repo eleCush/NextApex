@@ -13,24 +13,13 @@
             #?(:clj [postal.core :as postal])
             [xtdb.api #?(:clj :as :cljs :as-alias) xt]))
 
-#?(:clj
-   (def mail-config
-     {:host "smtp-relay.sendinblue.com"
-      :port 587
-      :user "v1nc3ntpull1ng@gmail.com"
-      :pass "CcEAZqTdVrDfRPzS"
-      :tls true}))
-
 #?(:cljs (defn set-scroll-position [x y] (.scrollTo js/window x y)))
 #?(:cljs (defn open-url [url] (.open js/window url)))
 #?(:cljs (defn get-current-path [] (.-pathname js/location)))
 #?(:cljs (defn replace-state [state title url] (.replaceState js/history state title url)))
 #?(:cljs (defn update-url [url] (replace-state nil "" url)))
 
-(defn nid
-  "Mints a new nid."
-  []
-  (subs (str (random-uuid)) 4 13))
+(defn nid "Mints a new nid." [] (subs (str (random-uuid)) 4 13))
 
 (e/def !xtdb)
 (e/def db) ; injected database ref; Electric defs are always dynamic
@@ -44,17 +33,9 @@
 (e/defn Link-and-Chat-UI [username]
   (let [usernamefromhttpreq
         (e/server (get-in e/*http-request* [:cookies "username" :value]))]
-    (dom/div (dom/text "online now: ") (dom/props {:class "gcui"}))
-    (dom/ul (dom/props {:class "fc"})
-     (e/server
-      (e/for-by first [[session-id username] present]
-                (e/client
-                 (dom/li (dom/props {:class "fi"}) (dom/text username))))))
-    (dom/hr)
     (dom/div (dom/props {:class "newsitemlistc fc"})
         (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id)))
         (when (not= "" online-user) (NewsItemCreate.))))
-    (dom/hr)
     (dom/ul (dom/props {:class "fc"})
      (e/server
       (e/for [{:keys [::username ::msg]} msgs]
@@ -75,7 +56,13 @@
                                                       (take 9 %)))
                                   ;;(add-event-notif :new-global-chat-msg (. System (currentTimeMillis)))
                                   )
-                                 (set! (.-value dom/node) ""))))))))))
+                                 (set! (.-value dom/node) "")))))))))
+      (dom/ul (dom/props {:class "fc"})
+      (dom/div (dom/text "online now: ") (dom/props {:class "gcui"}))
+      (e/server
+        (e/for-by first [[session-id username] present]
+                  (e/client
+                  (dom/li (dom/props {:class "fi"}) (dom/text username)))))))
 
 (e/defn Link-and-Chat-Extended []
   (e/client
@@ -117,19 +104,19 @@
       (e/client
         (dom/div (dom/props {:class "useritem fi"})
           (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi"})
+            (dom/div (dom/props {:class "fi www"})
              (dom/text username))
             (dom/div (dom/props {:class "fi"})
              (dom/text user-id))
             (dom/div (dom/props {:class "fi b"})
              (dom/text user-email))
-            (dom/div (dom/props {:class "fi"})
+            (dom/div (dom/props {:class "fi w"})
              (dom/text user-phone))
-            (dom/div (dom/props {:class "fi"})
+            (dom/div (dom/props {:class "fi ww"})
              (dom/text user-minted-at))
-            (dom/div (dom/props {:class "fi"})
+            (dom/div (dom/props {:class "fi www"})
              (dom/text (subs pw 21 32)))
-            (dom/div (dom/props {:class "fi"})
+            (dom/div (dom/props {:class "fi w"})
              (when (= "R" online-user) 
               (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))
              )))))))
@@ -141,7 +128,7 @@
        (map first)
        (sort-by :user/minted-at)
        vec)))
-#?(:clj (defn ensure-http-prefix [url] (if (.startsWith url "http://") url (str "http://" url))))
+#?(:clj (defn ensure-http-prefix [url] (if (or (.startsWith url "http://") (.startsWith url "https://")) url (str "https://" url))))
 
 ;;move between membranes with e/def (creates a new thing in the third layer accessible to both)
 #?(:cljs (def login-str (atom "")))
@@ -193,7 +180,7 @@
                  (dom/on "change" (e/fn [e]
                                      (reset! loginn-str (.-value dom/node) ))))
   (ui/button (e/fn []
-                (POST "http://localhost:8080/nextapex-login" 
+                (POST "https://nextapex.co/nextapex-login" 
                    {:params {:user ls :pass lpw}
                     :format :raw
                    :handler handle-response}))
@@ -235,12 +222,12 @@
               (dom/div (dom/props {:class "fi"})
                 (dom/text "NextApex"))
               (dom/div (dom/props {:class "fi"})
-                (dom/text "ocean // main page"))
+                (dom/text ""));"ocean // main page"))
               (dom/div (dom/props {:class "fi"})
                 (dom/text online-user))
                 (if (not (empty? online-user))
                   (ui/button (e/fn []
-                    (POST "http://localhost:8080/logout" 
+                    (POST "https://nextapex.co/logout" 
                       {:params {:hey "log me out"}
                        :format :raw
                        :handler handle-logout-response}))
@@ -253,10 +240,10 @@
               (dom/div (dom/props {:class "fi"})
                 (case view
                   :main  (do
-                          (dom/text "Current Tribe: " current-tribe-view))
-                  :tribes (dom/text "Ocean")))
+                          (dom/text ""));"Current Tribe: " current-tribe-view))
+                  :tribes (dom/text "")));"Ocean")))
               (dom/div (dom/props {:class "fi"})
-                (dom/text current-tribe-view " chatroom")))
+                (dom/text  " chatroom"))) ;;current-tribe-view
             (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
                 ;(dom/text "chatroom-goes-here")
@@ -296,7 +283,7 @@
       (e/client
         (dom/div (dom/props {:class "newsitem fing"})
           (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi"})
+            (dom/div (dom/props {:class "fi w"})
              (dom/text upvotes))
             (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
               [[:xtdb.api/put
@@ -307,31 +294,51 @@
               :item/id item-id
               :item/minted-by author
               :item/upvotes (inc upvotes)
-              :item/minted-at item-minted-at}]]))))) (dom/text "+"))
+              :item/minted-at item-minted-at}]]))))) (dom/props {:class "w"}) (dom/text "+"))
             (dom/div (dom/props {:class "fi fg bb"})
-             (dom/text link))
+             (dom/a (dom/props {:href link}) (dom/text title)))
             (dom/div (dom/props {:class "fi"})
              (dom/text "By:" author))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text "⧖ " time-since-minted))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text "↑ " (.toFixed score 3)))
-            (dom/div (dom/props {:class "fi"})
+            (dom/div (dom/props {:class "fi ww"})
+             (dom/text "⧖" (int (/ time-since-minted 1000))))
+            (dom/div (dom/props {:class "fi ww"})
+             (dom/text "↑" (.toFixed score 3)))
+            (dom/div (dom/props {:class "fi ww"})
              (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url item-id) (reset! !current-item-xt-id xt-id)) (dom/text "discuss")))
-            (dom/div (dom/props {:class "fi"})
+            (dom/div (dom/props {:class "fi w"})
              (when (= "R" online-user) 
               (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))))
 
-(e/defn NewsItemCreate [] (e/client (InputSubmit. "link to add"  (e/fn [v] (e/server 
-  (let [nid (nid)]
-    (e/discard (e/offload #(xt/submit-tx !xtdb 
-    [[:xtdb.api/put
-      {:xt/id nid
-      :item/link (ensure-http-prefix v)
-      :item/id nid
-      :item/minted-by online-user
-      :item/upvotes 0
-      :item/minted-at (System/currentTimeMillis)}]])))))))))
+#?(:cljs (def !ii-link-to-add (atom "")))
+(e/def ii-link-to-add (e/client (e/watch !ii-link-to-add)))
+#?(:cljs (def !ii-title-to-add (atom "")))
+(e/def ii-title-to-add (e/client (e/watch !ii-title-to-add)))
+;#?(:cljs (def !ii-desc-to-add (atom "")))
+;(e/def ii-desc-to-add (e/client (e/watch !ii-desc-to-add)))
+(e/defn NewsItemCreate [] 
+  (e/client 
+    (dom/div (dom/props {:class "nic"})
+       (dom/input (dom/props {:placeholder "link to add"})
+                  (dom/on "change" (e/fn [e]
+                                     (reset! !ii-link-to-add (.-value dom/node)))))
+       (dom/input (dom/props {:placeholder "title"})
+                  (dom/on "change" (e/fn [e]
+                                     (reset! !ii-title-to-add (.-value dom/node)))))
+       ;(dom/input (dom/props {:placeholder "description"})
+       ;           (dom/on "change" (e/fn [e]
+       ;                              (reset! !ii-desc-to-add (.-value dom/node)))))
+       (ui/button (e/fn [] (e/server 
+        (let [nid (nid)]
+          (e/discard (e/offload #(xt/submit-tx !xtdb 
+          [[:xtdb.api/put
+            {:xt/id nid
+            :item/title ii-title-to-add
+            :item/link (ensure-http-prefix ii-link-to-add)
+            :item/id nid
+            :item/minted-by online-user
+            :item/upvotes 0
+            :item/minted-at (System/currentTimeMillis)}]]))))))
+        (dom/text "submit")))))
 
 #?(:clj
    (defn newsitem-records [db]
@@ -349,11 +356,14 @@
           link (:item/link e)
           item-id (:item/id e)
           author (:item/minted-by e)
+          title (:item/title e)
           minted-at (:item/minted-at e)]
       (e/client
         (dom/div (dom/props {:class "itemview oo"})
           (dom/div (dom/props {:class "fi"})
-            (dom/span (dom/text "Current link: ")) (dom/a (dom/props {:href link}) (dom/text link)))
+            (dom/span (dom/text "Title: ")) (dom/a (dom/props {:href link}) (dom/text title)))
+          (dom/div (dom/props {:class "fi"})
+            (dom/span (dom/text "url: " link)))  
           (dom/div (dom/props {:class "fi"})
             (dom/text "Author: " author))
           (dom/div (dom/props {:class "reply-input fi"})

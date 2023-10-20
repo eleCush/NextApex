@@ -1,0 +1,90 @@
+(e/defn TribeItem [id]
+  (e/server
+    (let [e (xt/entity db id)
+          xt-id   (:xt/id e)
+          creator (:tribe/minted-by e)
+          tribe-id (:tribe/id e)
+          tribe-minted-at (:tribe/minted-at e)
+          link (:tribe/link e)
+          title (:tribe/title e) ;;hn style is (xor link desc)
+          desc (:tribe/desc e)
+          ] ;; a vector of tribe-ids [tribe1 tribe2 tribe3]
+      (e/client
+        (dom/div (dom/props {:class "newsitem fi"})
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+             (dom/text creator))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text tribe-id))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text tribe-minted-at))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text link))
+            (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn [] (reset! !current-tribe-view title) (reset! !view :main)) (dom/text title)))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text desc))
+            (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
+
+(e/defn TribeCreate [] (e/client (InputSubmit. "new tribe name"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+  [[:xtdb.api/put
+    {:xt/id (random-uuid)
+    :tribe/title v
+    :tribe/id (nid)
+    :tribe/minted-by online-user
+    :tribe/minted-at (System/currentTimeMillis)}]]))))))))
+
+#?(:clj
+   (defn tribe-records [db]
+     (->> (xt/q db '{:find [(pull ?t [:xt/id :tribe/minted-by :tribe/id :tribe/minted-at :tribe/title :tribe/members])]
+                     :where [[?t :tribe/id]]})
+       (map first)
+       (sort-by :tribe/minted-at)
+       vec)))
+
+
+
+
+
+...case view
+
+
+:tribes (do
+                            (dom/div (dom/props {:class "tribelistc fc"})
+                              (ui/button (e/fn [] (reset! !view :main) (reset! !current-tribe-view "ocean")) (dom/text "To Ocean"))
+                              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id)))))
+
+
+
+...tribe list at bott
+
+(dom/div (dom/props {:class "tribelistc fc"})
+              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
+            (TribeCreate.)
+
+
+button to switch to tribes view:
+
+(ui/button (e/fn [] (reset! !view :tribes) (reset! !current-item-xt-id nil) (reset! !current-item-id nil) (update-url "/tribes")) (dom/text "To Tribes List"))
+
+
+
+
+
+
+;;userList [oooooooooooo       ]
+;;itemsList [ooooo|$$|oo|oo|   ]
+;;tribesList [ooooo   ]
+;;feedbackList [      ]
+;;featureList [       ]
+
+;;createAccount [ooo  ]
+;;login [ooooooooooooo]
+;;
+
+;;oceanDisplay [oo |oo | ]
+
+;;tribeDisplay [ooo |oo | ]
+
+;;tribe [curators: , observers: , topic, id#, membercount, max-member-count]
