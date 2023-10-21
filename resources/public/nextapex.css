@@ -2,7 +2,7 @@
 
 body{
     font-family: 'IBM Plex Sans', sans-serif;
-    font-weight: 330;
+    font-weight: 130;
     /* background-color: #f6f6ef; */
     /* background-color: slategrey; */
     /* background-color: hsla(26, 96%, 92%, 0.7); */
@@ -14,14 +14,15 @@ body{
     background-color: rgb(38, 208, 129);
     background-color: hsl(152, 69.1%, 48.2%);
     background-color: hsl(159, 100%, 74%);
-    background-color: hsl(250, 9%, 13%); color: #fff;
+    background-color: hsl(250, 9%, 13%); color: #fffdf4;
     margin: 0;
     overflow-y: scroll;
     overflow-x: hidden;
 }
-a:link {color:rgb(56, 198, 211);}
-a:visited {color:rgb(22, 203, 219);}
-a:hover {color:rgb(22, 219, 163);}
+a:hover {color:rgb(22, 219, 163); color: rebeccapurple; transition: text-decoration 1s; text-decoration: underline;}
+a:visited {color:rgb(22, 219, 163); transition: text-decoration 1s;}
+a:link {color:rgb(22, 219, 163);}
+a {text-decoration: none;}
 
 input[type="text"]{
     padding: 0.5rem;
@@ -78,14 +79,14 @@ label::first-letter{
 .useritem, .newsitemlistc {background-color: hsl(254, 55%, 35%); color: #fff;
     background-color: hsl(250, 9%, 13%); color: #fff;}
 .newsitemlistc {width: 100%;}
-.b {font-weight: bold;}
+.b {font-weight: 200;}
 .fr {display: flex; flex-direction: row; width: 100%;}
 .fc {display: flex; flex-direction: column;}
 .fi {display: flex; flex-grow: 1;}
 .fg {display: flex; flex-grow: 1;}
 
 .fr, .fc {border: 0px solid rebeccapurple;}
-.fi {border: 1px solid rebeccapurple;}
+.fi {border: 0px dotted rebeccapurple;}
 .fi {padding: 4px;}
 .fing {display: flex; flex-grow: 0;}
 
@@ -106,10 +107,21 @@ label::first-letter{
 
 .ll {float: left;}
 .rr {float: right;}
-.bb {font-weight: bold;}
+.bb {font-weight: 200; letter-spacing: -0.02222em; font-size: 1.1em;}
 .reply-input > input {width: 100%;}
 button {font-size: 0.5em;}
 
 .w {flex: 0;}
 .ww {flex: 0; flex-basis: 1em;}
 .www {flex: 0; flex-basis: 6em;}
+.newsitem {flex-basis: 5em; border-radius: 4px;}
+.newsitem > .fg > .fc {width: 100%;}
+.ranking {margin: 0.1em 0.7em}
+.discuss {background-color:hsl(166, 85%, 69%); border-radius: 3px; margin-left: 1em;}
+.kind {height: 1em; display: block; flex: 0;
+position: absolute; bottom: 0; min-width: 180px;}
+.fc {position: relative;}
+.g {color: rgb(83, 234, 78);}
+.nic {margin-top: 3em;}
+.itemview {border: 7px solid black;}
+.selecteditem {background-color: black;}

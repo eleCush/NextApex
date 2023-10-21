@@ -31,11 +31,9 @@
 (e/def eventses (e/server (e/watch !eventses)))
 
 (e/defn Link-and-Chat-UI [username]
-  (let [usernamefromhttpreq
-        (e/server (get-in e/*http-request* [:cookies "username" :value]))]
     (dom/div (dom/props {:class "newsitemlistc fc"})
-        (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(newsitem-records db))] (NewsItem. id)))
-        (when (not= "" online-user) (NewsItemCreate.))))
+        (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(newsitem-records db))] (NewsItem. id rank)))
+        (when (not= "" online-user) (NewsItemCreate.)))
     (dom/ul (dom/props {:class "fc"})
      (e/server
       (e/for [{:keys [::username ::msg]} msgs]
@@ -46,23 +44,27 @@
       (when (not= "" online-user)
       (do
         (dom/input
-         (dom/props {:placeholder "Kind a message [global chat]" :class "kind fi"})
+         (dom/props {:placeholder "Kind a message [global chat]" :class "kind"})
          (dom/on "keydown" (e/fn [e]
                              (when (= "Enter" (.-key e))
                                (when-some [v (empty->nil (-> e .-target .-value))]
                                  (dom/style {:background-color "yellow"}) ; loading
                                  (e/server
-                                  (swap! !msgs #(cons {::username username ::msg v}
-                                                      (take 9 %)))
+                                   (let [u  (get-in e/*http-request* [:cookies "username" :value])
+                                         lm (get-in e/*http-request* [:cookies "loginmoment" :value])
+                                         uh (get-in e/*http-request* [:cookies "userhash" :value])
+                                         vw (verify-with :argon2 (str lm u) uh)]
+                                     (when vw (swap! !msgs #(cons {::username username ::msg v}
+                                                         (take 9 %)))))
                                   ;;(add-event-notif :new-global-chat-msg (. System (currentTimeMillis)))
                                   )
                                  (set! (.-value dom/node) "")))))))))
       (dom/ul (dom/props {:class "fc"})
-      (dom/div (dom/text "online now: ") (dom/props {:class "gcui"}))
+      (dom/div (dom/text "Online: ") (dom/props {:class "gcui"}))
       (e/server
         (e/for-by first [[session-id username] present]
                   (e/client
-                  (dom/li (dom/props {:class "fi"}) (dom/text username)))))))
+                  (dom/li (dom/props {:class "fi"}) (dom/span (dom/props {:class "g"}) (dom/text "•")) (dom/text username)))))))
 
 (e/defn Link-and-Chat-Extended []
   (e/client
@@ -197,13 +199,18 @@
                  (dom/on "change" (e/fn [e]
                                      (reset! !ca-password (.-value dom/node) ))))
   (ui/button (e/fn []
-                 (e/client (reset! !create-account-msg "Account created"))
+               (if (and (not (empty? ca-password)) (<= 2 (count ca-usrname)))
+                (do
+                 (e/client (reset! !create-account-msg "Creating account..."))
                  (e/server (e/discard  (e/offload  #(xt/submit-tx !xtdb [[:xtdb.api/put
-    {:xt/id (random-uuid)
-    :user/id (nid)
-    :user/minted-at (System/currentTimeMillis)
-    :user/username ca-usrname
-    :user/password (hash-with :argon2 ca-password)}]])))))
+                  {:xt/id (random-uuid)
+                  :user/id (nid)
+                  :user/minted-at (System/currentTimeMillis)
+                  :user/username ca-usrname
+                  :user/password (str (hash-with :argon2 ca-password))}]]))))
+                 (e/client (reset! !create-account-msg "Account created.")))
+      (e/client (reset! !create-account-msg "Must be 2 chars or more and have a password.")))
+    )
 
       (dom/text "Create Account"))
       (ui/button (e/fn [] (reset! !create-account-visible false)) (dom/text "✗")))
@@ -212,17 +219,19 @@
       (ui/button (e/fn [] (reset! !create-account-visible true)) (dom/text "create an account...")))))
 
 (e/defn Todo-list []
-  (e/server (let [username-from-http-req (e/server (get-in e/*http-request* [:cookies "username" :value]))]
+  (e/server (let [u (e/server (get-in e/*http-request* [:cookies "username" :value]))
+                  lm (e/server (get-in e/*http-request* [:cookies "loginmoment" :value]))
+                  uh (e/server (get-in e/*http-request* [:cookies "userhash" :value]))]
     (binding [!xtdb user/!xtdb
               db (new (db/latest-db> user/!xtdb))]
         (e/client
-          (if (some? username-from-http-req) (reset! !online-user username-from-http-req)) ;;check session, set cljs var
+          (when (e/server (verify-with :argon2 (str lm u) uh)) (reset! !online-user u) (reset! !online-user "")) ;;check session, set cljs var
           (dom/div (dom/props {:class "bigc"})
             (dom/div (dom/props {:class "fr hdr"})
               (dom/div (dom/props {:class "fi"})
                 (dom/text "NextApex"))
               (dom/div (dom/props {:class "fi"})
-                (dom/text ""));"ocean // main page"))
+                (ui/button (e/fn [] (reset! !current-item-id "") (reset! !current-item-xt-id "")) (dom/text "top")));"ocean // main page"))
               (dom/div (dom/props {:class "fi"})
                 (dom/text online-user))
                 (if (not (empty? online-user))
@@ -243,13 +252,13 @@
                           (dom/text ""));"Current Tribe: " current-tribe-view))
                   :tribes (dom/text "")));"Ocean")))
               (dom/div (dom/props {:class "fi"})
-                (dom/text  " chatroom"))) ;;current-tribe-view
+                (dom/text "")));  "Chatroom"))) ;;current-tribe-view
             (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
                 ;(dom/text "chatroom-goes-here")
                 (case view
                   
-                  :main (Link-and-Chat-Extended. "placeholder-username"))))
+                  :main (Link-and-Chat-Extended.))))
             (dom/div (dom/props {:class "fr"})
               (reset! !current-item-xt-id (subs (get-current-path) 1))
               (when current-item-xt-id (ItemView.)))
@@ -265,7 +274,7 @@
                 (CreateAccountPart.)))
             (dom/hr)))))))
 
-(e/defn NewsItem [id]
+(e/defn NewsItem [id rank]
   (e/server
     (let [e (xt/entity db id)
           xt-id   (:xt/id e)
@@ -281,33 +290,41 @@
           gravity 1.5
           score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))]
       (e/client
-        (dom/div (dom/props {:class "newsitem fing"})
-          (dom/div (dom/props {:class "fr"})
-            (dom/div (dom/props {:class "fi w"})
-             (dom/text upvotes))
-            (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
-              [[:xtdb.api/put
-              {:xt/id xt-id
-              :item/link link
-              :item/title title
-              :item/desc desc
-              :item/id item-id
-              :item/minted-by author
-              :item/upvotes (inc upvotes)
-              :item/minted-at item-minted-at}]]))))) (dom/props {:class "w"}) (dom/text "+"))
-            (dom/div (dom/props {:class "fi fg bb"})
-             (dom/a (dom/props {:href link}) (dom/text title)))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text "By:" author))
-            (dom/div (dom/props {:class "fi ww"})
-             (dom/text "⧖" (int (/ time-since-minted 1000))))
-            (dom/div (dom/props {:class "fi ww"})
-             (dom/text "↑" (.toFixed score 3)))
-            (dom/div (dom/props {:class "fi ww"})
-             (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url item-id) (reset! !current-item-xt-id xt-id)) (dom/text "discuss")))
-            (dom/div (dom/props {:class "fi w"})
-             (when (= "R" online-user) 
-              (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))))
+      (let [!vis (atom true)
+            vis (e/watch !vis)]
+        (dom/div (dom/props {:class ["newsitem" (if (= current-item-id item-id) "selecteditem")]})
+          (dom/div (dom/props {:class "fr fg"})
+            (dom/div (dom/props {:class "ranking"}) (dom/text rank "."))
+            (dom/div (dom/props {:class "fc"})
+              (dom/div (dom/props {:class "fr"})
+               (when (and vis (not= "" online-user))
+                (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+                  [[:xtdb.api/put
+                  {:xt/id xt-id
+                  :item/link link
+                  :item/title title
+                  :item/desc desc
+                  :item/id item-id
+                  :item/minted-by author
+                  :item/upvotes (inc upvotes)
+                  :item/minted-at item-minted-at}]]))) (e/client (reset! !vis false)))) (dom/props {:class "w"}) (dom/text "+")))
+                (dom/div (dom/props {:class "fi fg bb"})
+                (dom/a (dom/props {:href link :target "_atarashii"}) (dom/text title))))
+              (dom/div (dom/props {:class "fr"})  
+                (dom/div (dom/props {:class "fi w"})
+                (dom/text upvotes))
+                (dom/div (dom/props {:class "fi ww"})
+                (dom/text "By:" author))
+                (dom/div (dom/props {:class "fi ww"})
+                (dom/text "⧖" (.toFixed (/ time-since-minted 1000) 2)))
+                (dom/div (dom/props {:class "fi ww"})
+                (dom/text "↑" (.toFixed score 3)))
+                (dom/div (dom/props {:class "fiww"})
+                (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url item-id) (reset! !current-item-xt-id xt-id)) (dom/props {:class "discuss"}) (dom/text "select and discuss")))
+                (dom/div (dom/props {:class "fi"})
+                (dom/text ""))
+                (when (= "R" online-user) 
+                  (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))))))
 
 #?(:cljs (def !ii-link-to-add (atom "")))
 (e/def ii-link-to-add (e/client (e/watch !ii-link-to-add)))
@@ -327,26 +344,36 @@
        ;(dom/input (dom/props {:placeholder "description"})
        ;           (dom/on "change" (e/fn [e]
        ;                              (reset! !ii-desc-to-add (.-value dom/node)))))
-       (ui/button (e/fn [] (e/server 
-        (let [nid (nid)]
-          (e/discard (e/offload #(xt/submit-tx !xtdb 
-          [[:xtdb.api/put
-            {:xt/id nid
-            :item/title ii-title-to-add
-            :item/link (ensure-http-prefix ii-link-to-add)
-            :item/id nid
-            :item/minted-by online-user
-            :item/upvotes 0
-            :item/minted-at (System/currentTimeMillis)}]]))))))
-        (dom/text "submit")))))
+       (ui/button 
+         (e/fn [] 
+            (e/server 
+              (let [nid (nid)
+                    u  (get-in e/*http-request* [:cookies "username" :value])
+                    lm (get-in e/*http-request* [:cookies "loginmoment" :value])
+                    uh (get-in e/*http-request* [:cookies "userhash" :value])
+                    vw (verify-with :argon2 (str lm u) uh)]
+                    (when vw
+                      (e/discard (e/offload #(xt/submit-tx !xtdb 
+                        [[:xtdb.api/put
+                          {:xt/id nid
+                          :item/title ii-title-to-add
+                          :item/link (ensure-http-prefix ii-link-to-add)
+                          :item/id nid
+                          :item/minted-by u
+                          :item/upvotes 0
+                          :item/minted-at (System/currentTimeMillis)}]])))))))
+                    (dom/text "submit")))))
 
 #?(:clj
    (defn newsitem-records [db]
-     (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes])]
-                     :where [[?i :item/id]]})
-       (map first)
-       (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
-       vec)))
+     (try
+       (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes])]
+                        :where [[?i :item/id]]})
+          (map first)
+          (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
+          (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
+          vec)
+        (catch InterruptedException e))))
 
 (e/defn ItemView []
   (e/server
@@ -360,16 +387,19 @@
           minted-at (:item/minted-at e)]
       (e/client
         (dom/div (dom/props {:class "itemview oo"})
-          (dom/div (dom/props {:class "fi"})
-            (dom/span (dom/text "Title: ")) (dom/a (dom/props {:href link}) (dom/text title)))
-          (dom/div (dom/props {:class "fi"})
-            (dom/span (dom/text "url: " link)))  
-          (dom/div (dom/props {:class "fi"})
-            (dom/text "Author: " author))
-          (dom/div (dom/props {:class "reply-input fi"})
-            (ReplyCreate. xt-id xt-id))
-        (dom/div (dom/props {:class "replies"})
-          (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemNestedReplies. id)))))))))
+          (if (not (= "" current-item-id))
+            (do
+              (dom/div (dom/props {:class "fi"})
+                (dom/span (dom/text "Title: ")) (dom/a (dom/props {:href link}) (dom/text title)))
+              (dom/div (dom/props {:class "fi"})
+                (dom/span (dom/text "url: " link)))  
+              (dom/div (dom/props {:class "fi"})
+                (dom/text "Author: " author))
+              (dom/div (dom/props {:class "reply-input fi"})
+                (ReplyCreate. xt-id xt-id))
+            
+              (dom/div (dom/props {:class "replies"})
+                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemNestedReplies. id)))))))))))
 
 (e/defn ItemNestedReplies [xt-id]
   (e/server
@@ -487,7 +517,7 @@
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn ReplyCreate [item-xt-id parent-xt-id] 
-  (e/client (when (and item-xt-id parent-xt-id) 
+  (e/client (when (and item-xt-id parent-xt-id (not= "" online-user)) 
     (InputSubmit. "leave a comment"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
       [[:xtdb.api/put
         {:xt/id (random-uuid)
@@ -501,7 +531,7 @@
 
 (e/defn NestedReplyCreate [item-xt-id parent-xt-id] 
   (let [masked (atom true)]
-    (e/client (when (and item-xt-id parent-xt-id) 
+    (e/client (when (and item-xt-id parent-xt-id (not= "" online-user)) 
       (if (e/watch masked)
         (ui/button (e/fn [] (reset! masked false)) (dom/text "reply"))
         (InputSubmit. "nested reply"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
@@ -517,9 +547,11 @@
 
 #?(:clj
    (defn reply-with-descendant-records [db item-xt-id parent-xt-id]
-     (->> (xt/q db '{:find [(pull ?r [:xt/id :reply/text :reply/item-xt-id :reply/parent-xt-id :reply/upvotes])]
-                     :where [[?r :reply/item-xt-id item-xt-id]
-                             [?r :reply/parent-xt-id parent-xt-id]]
-                     :in [item-xt-id parent-xt-id]} item-xt-id parent-xt-id)
-       (map first)
-       vec)))
+     (try
+        (->> (xt/q db '{:find [(pull ?r [:xt/id :reply/text :reply/item-xt-id :reply/parent-xt-id :reply/upvotes])]
+                        :where [[?r :reply/item-xt-id item-xt-id]
+                                [?r :reply/parent-xt-id parent-xt-id]]
+                        :in [item-xt-id parent-xt-id]} item-xt-id parent-xt-id)
+          (map first)
+          vec)
+      (catch InterruptedException e))))
