@@ -149,14 +149,17 @@
 (e/def create-account-msg (e/client (e/watch !create-account-msg)))
 #?(:cljs (def !view (atom :main)))
 (e/def view (e/client (e/watch !view)))
-#?(:cljs (def !current-tribe-view (atom "ocean")))
-(e/def current-tribe-view (e/client (e/watch !current-tribe-view)))
+#?(:cljs (def !current-tribe-id (atom "global")))
+(e/def current-tribe-id (e/client (e/watch !current-tribe-id)))
+#?(:cljs (def !current-tribe-title (atom "global")))
+(e/def current-tribe-title (e/client (e/watch !current-tribe-title)))
 #?(:cljs (def !current-item-id (atom "")))
 (e/def current-item-id (e/client (e/watch !current-item-id)))
 #?(:cljs (def !current-item-xt-id (atom "")))
 (e/def current-item-xt-id (e/client (e/watch !current-item-xt-id)))
 #?(:cljs (def !parent-reply-xt-id (atom [])))
 (e/def parent-reply-xt-id (e/client (e/watch !parent-reply-xt-id)))
+
 
 #?(:cljs (defn handle-response [response]
   (println response)
@@ -231,10 +234,12 @@
               (dom/div (dom/props {:class "fi"})
                 (dom/text "NextApex"))
               (dom/div (dom/props {:class "fi"})
-                (ui/button (e/fn [] (reset! !current-item-id "") (reset! !current-item-xt-id "")) (dom/text "top")));"ocean // main page"))
+                (ui/button (e/fn [] (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !view :main) (reset! !current-tribe-id "global") (reset! !current-tribe-title "global")) (dom/text "top")))
+              (dom/div (dom/props {:class "fi"})
+                (ui/button (e/fn [] (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !view :tribes)) (dom/text "tribes")))
               (dom/div (dom/props {:class "fi"})
                 (dom/text online-user))
-                (if (not (empty? online-user))
+              (if (not (empty? online-user))
                   (ui/button (e/fn []
                     (POST "https://nextapex.co/logout" 
                       {:params {:hey "log me out"}
@@ -249,16 +254,17 @@
               (dom/div (dom/props {:class "fi"})
                 (case view
                   :main  (do
-                          (dom/text ""));"Current Tribe: " current-tribe-view))
-                  :tribes (dom/text "")));"Ocean")))
+                          (dom/text "Current tribe: " current-tribe-title))
+                  :tribes (dom/text "")))
               (dom/div (dom/props {:class "fi"})
-                (dom/text "")));  "Chatroom"))) ;;current-tribe-view
+                (dom/text "")));  "Chatroom")))
             (dom/div (dom/props {:class "fr"})
               (dom/div (dom/props {:class "fi"})
                 ;(dom/text "chatroom-goes-here")
                 (case view
                   
-                  :main (Link-and-Chat-Extended.))))
+                  :main (Link-and-Chat-Extended.)
+                  :tribes (TribesList.))))
             (dom/div (dom/props {:class "fr"})
               (reset! !current-item-xt-id (subs (get-current-path) 1))
               (when current-item-xt-id (ItemView.)))
@@ -361,6 +367,7 @@
                           :item/id nid
                           :item/minted-by u
                           :item/upvotes 0
+                          :item/tribe current-tribe-id
                           :item/minted-at (System/currentTimeMillis)}]])))))))
                     (dom/text "submit")))))
 
@@ -384,7 +391,8 @@
           item-id (:item/id e)
           author (:item/minted-by e)
           title (:item/title e)
-          minted-at (:item/minted-at e)]
+          minted-at (:item/minted-at e)
+          tribe (:item/tribe e)]
       (e/client
         (dom/div (dom/props {:class "itemview oo"})
           (if (not (= "" current-item-id))
@@ -395,6 +403,8 @@
                 (dom/span (dom/text "url: " link)))  
               (dom/div (dom/props {:class "fi"})
                 (dom/text "Author: " author))
+              (dom/div (dom/props {:class "fi"})
+                (dom/text "Tribe: " tribe))
               (dom/div (dom/props {:class "reply-input fi"})
                 (ReplyCreate. xt-id xt-id))
             
@@ -555,3 +565,57 @@
           (map first)
           vec)
       (catch InterruptedException e))))
+
+;; tribe list
+;; create new tribe
+;; visit tribe by clicking = shows [ | | ] []
+
+(e/defn TribeItem [id]
+  (e/server
+    (let [e (xt/entity db id)
+          xt-id   (:xt/id e)
+          creator (:tribe/minted-by e)
+          tribe-id (:tribe/id e)
+          tribe-minted-at (:tribe/minted-at e)
+          title (:tribe/title e)
+          desc (:tribe/desc e)
+          member-count (:tribe/member-count e)] 
+      (e/client
+        (dom/div (dom/props {:class "newsitem fi"})
+          (dom/div (dom/props {:class "fr"})
+            (dom/div (dom/props {:class "fi"})
+             (ui/button (e/fn []
+               (reset! !view :main)
+               (reset! !current-item-xt-id "")
+               (reset! !current-item-id "")
+               (reset! !current-tribe-title title)
+               (reset! !current-tribe-id tribe-id)
+               (update-url "/tribe/" tribe-id))
+                 (dom/props {:class "set-tribe"})
+                 (dom/text title)))
+            (dom/div (dom/props {:class "fi"})
+             (dom/text tribe-id))))))))
+
+(e/defn TribeCreate [] (e/client (InputSubmit. "new tribe name"  (e/fn [v] (e/server 
+  (let [nid (nid)]
+    (e/discard (e/offload #(xt/submit-tx !xtdb 
+      [[:xtdb.api/put
+        {:xt/id nid
+        :tribe/title v
+        :tribe/id nid
+        :tribe/minted-by online-user
+        :tribe/minted-at (System/currentTimeMillis)}]])))))))))
+
+#?(:clj
+   (defn tribe-records [db]
+     (->> (xt/q db '{:find [(pull ?t [:xt/id :tribe/minted-by :tribe/id :tribe/desc :tribe/minted-at :tribe/title :tribe/member-count])]
+                     :where [[?t :tribe/id]]})
+       (map first)
+       (sort-by :tribe/minted-at) ;;or :tribe/member-count
+       vec)))
+
+(e/defn TribesList []
+  (e/client 
+    (dom/div (dom/props {:class "tribelistc fc"})
+      (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
+    (TribeCreate.)))
