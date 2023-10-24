@@ -36,7 +36,7 @@
         (e/server (let [cti (if (empty? current-tribe-id) "global"  current-tribe-id)]
           (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(newsitem-records db cti))] (NewsItem. id rank))))
         (when (not= "" online-user) (NewsItemCreate.)))
-    (dom/ul (dom/props {:class "fc"})
+    (dom/ul (dom/props {:class "fc w croom"})
      (e/server
       (e/for [{:keys [::username ::msg]} msgs]
         (e/client
@@ -61,7 +61,7 @@
                                   ;;(add-event-notif :new-global-chat-msg (. System (currentTimeMillis)))
                                   )
                                  (set! (.-value dom/node) "")))))))))
-      (dom/ul (dom/props {:class "fc"})
+      (dom/ul (dom/props {:class "fc w"})
       (dom/div (dom/text "Online: ") (dom/props {:class "gcui"}))
       (e/server
         (e/for-by first [[session-id username] present]
@@ -121,7 +121,7 @@
             (dom/div (dom/props {:class "fi www"})
              (dom/text (subs pw 21 32)))
             (dom/div (dom/props {:class "fi w"})
-             (when (= "R" online-user) 
+             (when (= "R" online-user)
               (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))
              )))))))
 
@@ -141,6 +141,8 @@
 (e/def lpw (e/client (e/watch loginn-str)))
 #?(:cljs (def !ca-usrname (atom "")))
 (e/def ca-usrname (e/client (e/watch !ca-usrname)))
+#?(:cljs (def !ca-usr-email (atom "")))
+(e/def ca-usr-email (e/client (e/watch !ca-usr-email)))
 #?(:cljs (def !ca-password (atom "")))
 (e/def ca-password (e/client (e/watch !ca-password)))
 #?(:cljs (def !online-user (atom "")))
@@ -187,7 +189,7 @@
                  (dom/on "change" (e/fn [e]
                                      (reset! loginn-str (.-value dom/node) ))))
   (ui/button (e/fn []
-                (POST "https://nextapex.co/nextapex-login" 
+                (POST "https://nextapex.co/nextapex-login"
                    {:params {:user ls :pass lpw}
                     :format :raw
                    :handler handle-response}))
@@ -195,32 +197,36 @@
 
 (e/defn CreateAccountPart []
  (e/client
-  (if create-account-visible 
-   (do
-  (dom/input (dom/props {:placeholder "username"})
-                 (dom/on "change" (e/fn [e]
-                                     (reset! !ca-usrname (.-value dom/node) ))))
-  (dom/input (dom/props {:placeholder "password" :type "password"})
-                 (dom/on "change" (e/fn [e]
-                                     (reset! !ca-password (.-value dom/node) ))))
-  (ui/button (e/fn []
-               (if (and (not (empty? ca-password)) (<= 2 (count ca-usrname)))
-                (do
-                 (e/client (reset! !create-account-msg "Creating account..."))
-                 (e/server (e/discard  (e/offload  #(xt/submit-tx !xtdb [[:xtdb.api/put
-                  {:xt/id (random-uuid)
-                  :user/id (nid)
-                  :user/minted-at (System/currentTimeMillis)
-                  :user/username ca-usrname
-                  :user/password (str (hash-with :argon2 ca-password))}]]))))
-                 (e/client (reset! !create-account-msg "Account created.")))
-      (e/client (reset! !create-account-msg "Must be 2 chars or more and have a password.")))
-    )
+  (if create-account-visible
+   (let [valid-email? (fn [email] (re-matches  #"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)" email))]
+    (dom/input (dom/props {:placeholder "username"})
+                  (dom/on "change" (e/fn [e]
+                                      (reset! !ca-usrname (.-value dom/node) ))))
+    (dom/input (dom/props {:placeholder "email"})
+                  (dom/on "change" (e/fn [e]
+                                      (reset! !ca-usr-email (.-value dom/node) ))))
+    (dom/input (dom/props {:placeholder "password" :type "password"})
+                  (dom/on "change" (e/fn [e]
+                                      (reset! !ca-password (.-value dom/node) ))))
+    (ui/button (e/fn []
+                (if (and (not (empty? ca-password)) (valid-email? ca-usr-email) (<= 2 (count ca-usrname)))
+                  (do
+                  (e/client (reset! !create-account-msg "Creating account..."))
+                  (e/server (e/discard  (e/offload  #(xt/submit-tx !xtdb [[:xtdb.api/put
+                    {:xt/id (random-uuid)
+                    :user/id (nid)
+                    :user/minted-at (System/currentTimeMillis)
+                    :user/username ca-usrname
+                    :user/email ca-usr-email
+                    :user/password (str (hash-with :argon2 ca-password))}]]))))
+                  (e/client (reset! !create-account-msg "Account created.")))
+        (e/client (reset! !create-account-msg "Must be 2 chars+, valid email, and have a password.")))
+      )
 
-      (dom/text "Create Account"))
-      (ui/button (e/fn [] (reset! !create-account-visible false)) (dom/text "✗")))
-      ;
-      ;else
+        (dom/text "Create Account"))
+        (ui/button (e/fn [] (reset! !create-account-visible false)) (dom/text "✗")))
+        ;
+        ;else
       (ui/button (e/fn [] (reset! !create-account-visible true)) (dom/text "create an account...")))))
 
 (e/defn Todo-list []
@@ -230,7 +236,7 @@
     (binding [!xtdb user/!xtdb
               db (new (db/latest-db> user/!xtdb))]
         (e/client
-          (when (e/server (verify-with :argon2 (str lm u) uh)) (reset! !online-user u) (reset! !online-user "")) ;;check session, set cljs var
+          (when (not (empty? uh)) (if (e/server (verify-with :argon2 (str lm u) uh)) (do (reset! !online-user u) (reset! !online-user "")))) ;;check session, set cljs var
           (let [sta (rest (clojure.string/split (get-current-path) "/" ))]
             (when (= 3 (count sta))
               (reset! !view :main)
@@ -256,14 +262,14 @@
               (dom/div (dom/props {:class "fi w"})
                 (dom/text "NextApex"))
               (dom/div (dom/props {:class "fi w"})
-                (ui/button (e/fn [] (update-url "/global/") (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !view :main) (reset! !current-tribe-id "global") (reset! !current-tribe-title "global")) (dom/text "global") (dom/props {:class (if (= view "global") "selegold" "")})))
+                (ui/button (e/fn [] (reset! !view :main) (update-url "/global/") (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !current-tribe-id "global") (reset! !current-tribe-title "global")) (dom/text "global") (dom/props {:class (if (= view "global") "selegold" "")})))
               (dom/div (dom/props {:class "fi"})
                 (ui/button (e/fn [] (update-url "/tribes/") (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !view :tribes)) (dom/text "tribes")))
               (dom/div (dom/props {:class "fi"})
                 (dom/text online-user))
               (if (not (empty? online-user))
                   (ui/button (e/fn []
-                    (POST "https://nextapex.co/logout" 
+                    (POST "https://nextapex.co/logout"
                       {:params {:hey "log me out"}
                        :format :raw
                        :handler handle-logout-response}))
@@ -288,7 +294,7 @@
                   );  "Chatroom")))
                 ;(dom/text "chatroom-goes-here")
             (case view
-              
+
               :main (dom/div (dom/props {:class "fr lace"}) (Link-and-Chat-Extended.))
               :tribes (TribesList.))
 ;            (when (not= view :tribes)
@@ -296,14 +302,15 @@
                 ;(reset! !current-item-xt-id (subs (get-current-path) 8))
                 (when current-item-xt-id (ItemView.)))
                 ;)
-                
+
           ;  (dom/h1 (dom/text "welcome to NextApex.co"))
           ;  (dom/p (dom/text "realtime link share"))
           ;  (dom/hr)
-          ;  (dom/div (dom/props {:class "userlistc fc"})
-          ;    (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
+          (when (= "R" online-user)
+            (dom/div (dom/props {:class "userlistc fc"})
+              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id)))))
           ;  (dom/hr)
-            (if (not= "" create-account-msg) 
+            (if (not= "" create-account-msg)
               (dom/div (dom/text create-account-msg))
               (if (empty? online-user)
                 (CreateAccountPart.)))
@@ -323,7 +330,7 @@
           upvotes (or (:item/upvotes e) 0)
           time-since-minted (- e/system-time-ms item-minted-at)
           hrs-since-minted (/ time-since-minted 3600)
-          gravity 1.5
+          gravity 1.1
           score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))]
       (e/client
       (let [!vis (atom true)
@@ -334,7 +341,7 @@
             (dom/div (dom/props {:class "fc"})
               (dom/div (dom/props {:class "fr"})
                (when (and vis (not= "" online-user))
-                (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+                (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb
                   [[:xtdb.api/put
                   {:xt/id xt-id
                   :item/link link
@@ -347,9 +354,9 @@
                   :item/minted-at item-minted-at}]]))) (e/client (reset! !vis false)))) (dom/props {:class "w"}) (dom/text "+")))
                 (dom/div (dom/props {:class "fi fg bb"})
                 (dom/a (dom/props {:href link :target "_atarashii"}) (dom/text title))))
-              (dom/div (dom/props {:class "fr"})  
+              (dom/div (dom/props {:class "fr"})
                 (dom/div (dom/props {:class "fi w"})
-                (dom/text upvotes))
+                (dom/text upvotes " points"))
                 (dom/div (dom/props {:class "fi ww"})
                 (dom/text "By:" author))
                 (dom/div (dom/props {:class "fi ww"})
@@ -360,7 +367,7 @@
                 (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url (str (if (= "global" current-tribe-id) "/global/" (str "/tribes/" current-tribe-id "/")) item-id)) (reset! !current-item-xt-id xt-id)) (dom/props {:class "discuss"}) (dom/text "select and discuss")))
                 (dom/div (dom/props {:class "fi"})
                 (dom/text ""))
-                (when (= "R" online-user) 
+                (when (= "R" online-user)
                   (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))))))
 
 #?(:cljs (def !ii-link-to-add (atom "")))
@@ -369,28 +376,28 @@
 (e/def ii-title-to-add (e/client (e/watch !ii-title-to-add)))
 ;#?(:cljs (def !ii-desc-to-add (atom "")))
 ;(e/def ii-desc-to-add (e/client (e/watch !ii-desc-to-add)))
-(e/defn NewsItemCreate [] 
-  (e/client 
+(e/defn NewsItemCreate []
+  (e/client
     (dom/div (dom/props {:class "nic"})
-       (dom/input (dom/props {:placeholder "link to add"})
+       (dom/input (dom/props {:placeholder "Link to add"})
                   (dom/on "change" (e/fn [e]
                                      (reset! !ii-link-to-add (.-value dom/node)))))
-       (dom/input (dom/props {:placeholder "title"})
+       (dom/input (dom/props {:placeholder "Enter a Title"})
                   (dom/on "change" (e/fn [e]
                                      (reset! !ii-title-to-add (.-value dom/node)))))
        ;(dom/input (dom/props {:placeholder "description"})
        ;           (dom/on "change" (e/fn [e]
        ;                              (reset! !ii-desc-to-add (.-value dom/node)))))
-       (ui/button 
-         (e/fn [] 
-            (e/server 
+       (ui/button
+         (e/fn []
+            (e/server
               (let [nid (nid)
                     u  (get-in e/*http-request* [:cookies "username" :value])
                     lm (get-in e/*http-request* [:cookies "loginmoment" :value])
                     uh (get-in e/*http-request* [:cookies "userhash" :value])
                     vw (verify-with :argon2 (str lm u) uh)]
                     (when vw
-                      (e/discard (e/offload #(xt/submit-tx !xtdb 
+                      (e/discard (e/offload #(xt/submit-tx !xtdb
                         [[:xtdb.api/put
                           {:xt/id nid
                           :item/title ii-title-to-add
@@ -404,16 +411,17 @@
 
 #?(:clj
    (defn newsitem-records [db tribe-id]
+    (let [gravity 1.1]
      (try
        (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes :item/tribe])]
                         :where [[?i :item/id]
                                 [?i :item/tribe tribe]]
                         :in [tribe]} tribe-id)
           (map first)
-          (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
+          (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.1)) >) ;;score
           (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
           vec)
-        (catch InterruptedException e))))
+        (catch InterruptedException e)))))
 
 #?(:clj
     (defn get-tribe-title-from-id [db tribe-id]
@@ -440,20 +448,20 @@
         (dom/div (dom/props {:class "itemview oo"})
           (if (not (= "" current-item-id))
             (do
-              (when tribe (reset! !current-tribe-id tribe)) 
+              (when tribe (reset! !current-tribe-id tribe))
               (dom/div (dom/props {:class "fi"})
                 (dom/span (dom/text "Title: ")) (dom/a (dom/props {:href link}) (dom/text title)))
               (dom/div (dom/props {:class "fi"})
-                (dom/span (dom/text "url: " link)))  
+                (dom/span (dom/text "url: " link)))
               (dom/div (dom/props {:class "fi"})
                 (dom/text "Author: " author))
               (dom/div (dom/props {:class "fi"})
                 (dom/text "Tribe: " tribe))
               (dom/div (dom/props {:class "reply-input fi"})
                 (ReplyCreate. xt-id xt-id))
-            
+
               (dom/div (dom/props {:class "replies"})
-                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] 
+                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))]
                   (ItemReply. id)))))))))))
 
 (e/defn ItemReply [xt-id]
@@ -477,7 +485,7 @@
              (dom/div (dom/props {:class "replies "})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyB. id)))))
           (dom/div (dom/props {:class ""})
-           (when (= "R" online-user) 
+           (when (= "R" online-user)
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn ItemReplyB [xt-id]
@@ -501,7 +509,7 @@
              (dom/div (dom/props {:class "replies"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyC. id)))))
           (dom/div (dom/props {:class ""})
-           (when (= "R" online-user) 
+           (when (= "R" online-user)
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn ItemReplyC [xt-id]
@@ -525,7 +533,7 @@
              (dom/div (dom/props {:class "replies"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyD. id)))))
           (dom/div (dom/props {:class ""})
-           (when (= "R" online-user) 
+           (when (= "R" online-user)
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
 (e/defn ItemReplyD [xt-id]
@@ -544,12 +552,12 @@
           (dom/div (dom/props {:class ""})
             (dom/text author))
           (dom/div (dom/props {:class ""})
-           (when (= "R" online-user) 
+           (when (= "R" online-user)
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
 
-(e/defn ReplyCreate [item-xt-id parent-xt-id] 
-  (e/client (when (and item-xt-id parent-xt-id (not= "" online-user)) 
-    (InputSubmit. "leave a comment"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+(e/defn ReplyCreate [item-xt-id parent-xt-id]
+  (e/client (when (and item-xt-id parent-xt-id (not= "" online-user))
+    (InputSubmit. "leave a comment"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb
       [[:xtdb.api/put
         {:xt/id (random-uuid)
         :reply/text v
@@ -560,12 +568,12 @@
         :reply/parent-xt-id parent-xt-id ;; i think this should be item-xt-id
         :reply/minted-at (System/currentTimeMillis)}]])))))))))
 
-(e/defn NestedReplyCreate [item-xt-id parent-xt-id] 
+(e/defn NestedReplyCreate [item-xt-id parent-xt-id]
   (let [masked (atom true)]
-    (e/client (when (and item-xt-id parent-xt-id (not= "" online-user)) 
+    (e/client (when (and item-xt-id parent-xt-id (not= "" online-user))
       (if (e/watch masked)
         (ui/button (e/fn [] (reset! masked false)) (dom/text "reply"))
-        (InputSubmit. "nested reply"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+        (InputSubmit. "nested reply"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb
       [[:xtdb.api/put
         {:xt/id (random-uuid)
         :reply/text v
@@ -602,29 +610,32 @@
           tribe-minted-at (:tribe/minted-at e)
           title (:tribe/title e)
           desc (:tribe/desc e)
-          member-count (:tribe/member-count e)] 
+          member-count (:tribe/member-count e)]
       (e/client
-        (dom/div (dom/props {:class "tribeitem fr"})
+        (dom/div (dom/props {:class "tribeitem fc"})
+          (dom/div (dom/props {:class "fr"})
             (dom/div (dom/props {:class "fi"})
              (ui/button (e/fn []
-               (reset! !current-item-xt-id "")
-               (reset! !current-item-id "")
-               (reset! !current-tribe-title title)
-               (reset! !current-tribe-id tribe-id)
-               (update-url (str "/tribes/" tribe-id "/"))
-               (reset! !view :main)
-               )
-                 (dom/props {:class "set-tribe"})
-                 (dom/text title)))
-            (dom/div (dom/props {:class "fi"})
-             (dom/text (or member-count 0) " members"))
-          (when (= "R" online-user) 
-              (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))
+                                (reset! !current-item-xt-id "")
+                                (reset! !current-item-id "")
+                                (reset! !current-tribe-title title)
+                                (reset! !current-tribe-id tribe-id)
+                                (update-url (str "/tribes/" tribe-id "/"))
+                                (reset! !view :main))
+                        (dom/props {:class "set-tribe"})
+                        (dom/text title)))
+            (dom/div (dom/props {:class "fi w"})
+             (dom/text "0 members"))
+          (when (= "R" online-user)
+              (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))
+
+          (dom/div (dom/props {:class "fc"})
+            (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(newsitem-records db tribe-id))] (NewsItem. id rank)))))))))
 
 (e/defn TribeCreate [] (e/client (dom/div (dom/props {:class "fr"})
-  (InputSubmit. "new tribe name"  (e/fn [v] (e/server 
+  (InputSubmit. "new tribe name"  (e/fn [v] (e/server
     (let [nid (nid)]
-      (e/discard (e/offload #(xt/submit-tx !xtdb 
+      (e/discard (e/offload #(xt/submit-tx !xtdb
         [[:xtdb.api/put
           {:xt/id nid
           :tribe/title v
@@ -641,9 +652,9 @@
        vec)))
 
 (e/defn TribesList []
-  (e/client 
+  (e/client
     (update-url "/tribes/")
-    (dom/div (dom/props {:class "tribelistc fr"})
+    (dom/div (dom/props {:class "tribelistc fc"})
       (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tribe-records db))] (TribeItem. id))))
     (dom/br)
     (TribeCreate.)))
