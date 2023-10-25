@@ -30,12 +30,11 @@
 #?(:clj (defonce !eventses (atom []))) ; eventses are coll of event-type & timestamp and only accepts timestamps within :big-window: while interface displays :lil-window: worth of notifs
 (e/def eventses (e/server (e/watch !eventses)))
 
-(e/defn Link-and-Chat-UI [username]
-    (dom/div (dom/props {:class "newsitemlistc fc"})
-     (.log js/console "current tribe id = " current-tribe-id)
-        (e/server (let [cti (if (empty? current-tribe-id) "global"  current-tribe-id)]
-          (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(newsitem-records db cti))] (NewsItem. id rank))))
-        (when (not= "" online-user) (NewsItemCreate.)))
+(e/defn Link-and-Chat-UI [username tribe-soul-brother]
+ (let [tribe-soul-brother (if (not tribe-soul-brother) "" tribe-soul-brother)]
+  (dom/div (dom/props {:class "newsitemlistc fc"})
+     (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(newsitem-records db tribe-soul-brother))] (NewsItem. id rank)))
+      (when (and (not= "" tribe-soul-brother) (not= "" online-user)) (NewsItemCreate.)))
     (dom/ul (dom/props {:class "fc w croom"})
      (e/server
       (e/for [{:keys [::username ::msg]} msgs]
@@ -66,7 +65,7 @@
       (e/server
         (e/for-by first [[session-id username] present]
                   (e/client
-                  (dom/li (dom/props {:class "fi"}) (dom/span (dom/props {:class "g"}) (dom/text "•")) (dom/text username)))))))
+                  (dom/li (dom/props {:class "fi"}) (dom/span (dom/props {:class "g"}) (dom/text "•")) (dom/text username))))))))"e."
 
 (e/defn Link-and-Chat-Extended []
   (e/client
@@ -78,7 +77,7 @@
           (swap! !present assoc session-id online-user)
           (e/on-unmount #(swap! !present dissoc session-id)))
          ;(dom/div (dom/text "Authenticated as: " remewserid))
-         (Link-and-Chat-UI. online-user))))))
+         (Link-and-Chat-UI. online-user current-tribe-id))))))
 
 (e/defn InputSubmit [ph F]
   ; Custom input control using lower dom interface for Enter handling
@@ -153,9 +152,9 @@
 (e/def create-account-msg (e/client (e/watch !create-account-msg)))
 #?(:cljs (def !view (atom :main)))
 (e/def view (e/client (e/watch !view)))
-#?(:cljs (def !current-tribe-id (atom "global")))
+#?(:cljs (def !current-tribe-id (atom "")))
 (e/def current-tribe-id (e/client (e/watch !current-tribe-id)))
-#?(:cljs (def !current-tribe-title (atom "global")))
+#?(:cljs (def !current-tribe-title (atom "")))
 (e/def current-tribe-title (e/client (e/watch !current-tribe-title)))
 #?(:cljs (def !current-item-id (atom "")))
 (e/def current-item-id (e/client (e/watch !current-item-id)))
@@ -243,15 +242,13 @@
               (reset! !current-tribe-id (second sta))
               (reset! !current-item-id (last sta))
               (reset! !current-item-xt-id (last sta))
-              (reset! !current-tribe-title (e/server (e/offload #(get-tribe-title-from-id db current-tribe-id))))
-              )
+              (reset! !current-tribe-title (e/server (e/offload #(get-tribe-title-from-id db current-tribe-id)))))
             (when (= 1 (count sta))
               (if (= "tribes" (first sta)) (reset! !view :tribes))
               (reset! !current-tribe-id "")
               (reset! !current-item-id "")
               (reset! !current-item-xt-id "")
-              (reset! !current-tribe-title "")
-              )
+              (reset! !current-tribe-title ""))
             (println "sta: " sta)
             (println (first sta))
             (println (second sta))
@@ -260,11 +257,9 @@
           (dom/div (dom/props {:class "bigc"})
             (dom/div (dom/props {:class "fr hdr"})
               (dom/div (dom/props {:class "fi w"})
-                (dom/text "NextApex"))
-              (dom/div (dom/props {:class "fi w"})
-                (ui/button (e/fn [] (reset! !view :main) (update-url "/global/") (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !current-tribe-id "global") (reset! !current-tribe-title "global")) (dom/text "global") (dom/props {:class (if (= view "global") "selegold" "")})))
+                (ui/button (e/fn []  (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !current-tribe-id "") (reset! !current-tribe-title "") (reset! !view :main) (update-url "/")) (dom/text "NextApex")))
               (dom/div (dom/props {:class "fi"})
-                (ui/button (e/fn [] (update-url "/tribes/") (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !view :tribes)) (dom/text "tribes")))
+                (ui/button (e/fn [] (update-url "/tribes/") (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !view :tribes)) (dom/text "tribes"))) ;(dom/props {:class (if (= view :tribes) "selegold" "")})
               (dom/div (dom/props {:class "fi"})
                 (dom/text online-user))
               (if (not (empty? online-user))
@@ -277,39 +272,24 @@
                     (dom/text "Logout"))
                   (LoginPart.)))
             (dom/div (dom/props {:class "fr hhdr"})
-              (dom/div (dom/props {:class "fi"})
-                (dom/text (e/client current-item-id)))
-              (dom/div (dom/props {:class "fi"})
-                (case view
-                  :main  (do
-                          (dom/text "Current tribe: " current-tribe-title))
-                  :tribes (dom/text "")))
-             ; (when (not= "global" current-tribe-id)
-               ; (dom/div (dom/props {:class "fi"})
-               ;   (ui/button (e/fn [] ) (dom/text "Join tribe")))
-               ; (dom/div (dom/props {:class "fi"})
-               ;   (ui/button (e/fn [] ) (dom/text "Join waitlist")))
-               ; (dom/div (dom/props {:class "fi"})
-                ;  (ui/button (e/fn [] ) (dom/text "Leave tribe"))))
-                  );  "Chatroom")))
-                ;(dom/text "chatroom-goes-here")
+              ;(dom/div (dom/props {:class "fi w"})
+              ;  (dom/text (e/client current-item-id)))
+              (case view 
+                :main (dom/div (dom/props {:class "fi"})
+                        (when (not= current-tribe-id "")
+                          (let [tn (e/server (e/offload #(get-tribe-title-from-id db current-tribe-id)))]
+                            (ui/button (e/fn [] (update-url "/tribes/") (reset! !current-item-id "") (reset! !current-item-xt-id "") (reset! !view :tribes)) (dom/text "<"))
+                            (ui/button (e/fn [] (reset! !current-tribe-id current-tribe-id)) (dom/text tn " (" current-tribe-id ")"))))
+                      )))
             (case view
 
               :main (dom/div (dom/props {:class "fr lace"}) (Link-and-Chat-Extended.))
               :tribes (TribesList.))
-;            (when (not= view :tribes)
               (dom/div (dom/props {:class "fr"})
-                ;(reset! !current-item-xt-id (subs (get-current-path) 8))
                 (when current-item-xt-id (ItemView.)))
-                ;)
-
-          ;  (dom/h1 (dom/text "welcome to NextApex.co"))
-          ;  (dom/p (dom/text "realtime link share"))
-          ;  (dom/hr)
           (when (= "R" online-user)
             (dom/div (dom/props {:class "userlistc fc"})
               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id)))))
-          ;  (dom/hr)
             (if (not= "" create-account-msg)
               (dom/div (dom/text create-account-msg))
               (if (empty? online-user)
@@ -331,7 +311,8 @@
           time-since-minted (- e/system-time-ms item-minted-at)
           hrs-since-minted (/ time-since-minted 3600)
           gravity 1.1
-          score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))]
+          score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))
+          reply-count (e/server (e/offload #(get-reply-count-from-newsitem-id db xt-id)))]
       (e/client
       (let [!vis (atom true)
             vis (e/watch !vis)]
@@ -355,17 +336,17 @@
                 (dom/div (dom/props {:class "fi fg bb"})
                 (dom/a (dom/props {:href link :target "_atarashii"}) (dom/text title))))
               (dom/div (dom/props {:class "fr"})
-                (dom/div (dom/props {:class "fi w"})
+                (dom/div (dom/props {:class "fi w gry "})
                 (dom/text upvotes " points"))
-                (dom/div (dom/props {:class "fi ww"})
+                (dom/div (dom/props {:class "fi ww gry "})
                 (dom/text "By:" author))
-                (dom/div (dom/props {:class "fi ww"})
+                (dom/div (dom/props {:class "fi ww gry "})
                 (dom/text "⧖" (.toFixed (/ time-since-minted 1000) 2)))
-                (dom/div (dom/props {:class "fi ww"})
+                (dom/div (dom/props {:class "fi ww gry "})
                 (dom/text "↑" (.toFixed score 3)))
-                (dom/div (dom/props {:class "fiww"})
-                (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url (str (if (= "global" current-tribe-id) "/global/" (str "/tribes/" current-tribe-id "/")) item-id)) (reset! !current-item-xt-id xt-id)) (dom/props {:class "discuss"}) (dom/text "select and discuss")))
-                (dom/div (dom/props {:class "fi"})
+                (dom/div (dom/props {:class "fi gry ww"})                               
+                (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url (str "/tribes/" tribe "/" item-id)) (reset! !current-item-xt-id xt-id) (reset! !view :main)) (dom/props {:class "discuss"}) (dom/text (str reply-count " replies"))))
+                (dom/div (dom/props {:class "fi gry "})
                 (dom/text ""))
                 (when (= "R" online-user)
                   (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))))))
@@ -374,8 +355,6 @@
 (e/def ii-link-to-add (e/client (e/watch !ii-link-to-add)))
 #?(:cljs (def !ii-title-to-add (atom "")))
 (e/def ii-title-to-add (e/client (e/watch !ii-title-to-add)))
-;#?(:cljs (def !ii-desc-to-add (atom "")))
-;(e/def ii-desc-to-add (e/client (e/watch !ii-desc-to-add)))
 (e/defn NewsItemCreate []
   (e/client
     (dom/div (dom/props {:class "nic"})
@@ -385,9 +364,6 @@
        (dom/input (dom/props {:placeholder "Enter a Title"})
                   (dom/on "change" (e/fn [e]
                                      (reset! !ii-title-to-add (.-value dom/node)))))
-       ;(dom/input (dom/props {:placeholder "description"})
-       ;           (dom/on "change" (e/fn [e]
-       ;                              (reset! !ii-desc-to-add (.-value dom/node)))))
        (ui/button
          (e/fn []
             (e/server
@@ -410,18 +386,27 @@
                     (dom/text "submit")))))
 
 #?(:clj
-   (defn newsitem-records [db tribe-id]
-    (let [gravity 1.1]
-     (try
-       (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes :item/tribe])]
-                        :where [[?i :item/id]
-                                [?i :item/tribe tribe]]
-                        :in [tribe]} tribe-id)
-          (map first)
-          (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.1)) >) ;;score
-          (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
-          vec)
-        (catch InterruptedException e)))))
+    (defn newsitem-records [db tribe-id]
+      (let [gravity 1.1]
+        (if (= "" tribe-id)
+          (try
+            (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes :item/tribe])]
+                              :where [[?i :item/id]]})
+                (map first)
+                (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.1)) >) ;;score
+                (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
+                vec)
+              (catch InterruptedException e))
+          (try
+            (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes :item/tribe])]
+                              :where [[?i :item/id]
+                                      [?i :item/tribe tribe]]
+                              :in [tribe]} tribe-id)
+                (map first)
+                (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.1)) >) ;;score
+                (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
+                vec)
+              (catch InterruptedException e))))))
 
 #?(:clj
     (defn get-tribe-title-from-id [db tribe-id]
@@ -431,6 +416,20 @@
                             :in [tribe]} tribe-id)
           first
           first)))
+
+#?(:clj
+    (defn get-reply-count-from-newsitem-id [db newsitem-id]
+      (let [k-kount (->> (xt/q db '{:find [(pull ?r [:xt/id :reply/item-xt-id])]
+                      :where [[?r :reply/item-xt-id newsitem-id]]
+                      :in [newsitem-id]} newsitem-id)
+                    first
+                    count)
+            p-kount (->> (xt/q db '{:find [(pull ?r [:xt/id :reply/item-xt-id])]
+                      :where [[?r :reply/parent-xt-id newsitem-id]]
+                      :in [newsitem-id]} newsitem-id)
+                    first
+                    count)]
+          (+ k-kount p-kount))))
 
 (e/defn ItemView []
   (e/server
@@ -442,7 +441,8 @@
           author (:item/minted-by e)
           title (:item/title e)
           minted-at (:item/minted-at e)
-          tribe (:item/tribe e)]
+          tribe (:item/tribe e)
+          upvotes (:item/upvotes e)]
       (e/client
         (when item-id (reset! !current-item-id item-id))
         (dom/div (dom/props {:class "itemview oo"})
@@ -451,6 +451,20 @@
               (when tribe (reset! !current-tribe-id tribe))
               (dom/div (dom/props {:class "fi"})
                 (dom/span (dom/text "Title: ")) (dom/a (dom/props {:href link}) (dom/text title)))
+
+      (when (= online-user "R")
+        (InputSubmit. "edit title"  (e/fn [v] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb
+          [[:xtdb.api/put
+            {:xt/id xt-id
+             :item/title v
+             :item/link link
+             :item/id item-id
+             :item/minted-by author
+             :item/upvotes upvotes
+             :item/tribe tribe
+             :item/minted-at minted-at
+             :item/modified-at (System/currentTimeMillis)}]])))))))
+
               (dom/div (dom/props {:class "fi"})
                 (dom/span (dom/text "url: " link)))
               (dom/div (dom/props {:class "fi"})
@@ -625,7 +639,7 @@
                         (dom/props {:class "set-tribe"})
                         (dom/text title)))
             (dom/div (dom/props {:class "fi w"})
-             (dom/text "0 members"))
+             (dom/text (inc (rand-int 5)) " members"))
           (when (= "R" online-user)
               (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))
 
