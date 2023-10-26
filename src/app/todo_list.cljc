@@ -332,7 +332,7 @@
                   :item/tribe tribe
                   :item/minted-by author
                   :item/upvotes (inc upvotes)
-                  :item/minted-at item-minted-at}]]))) (e/client (reset! !vis false)))) (dom/props {:class "w"}) (dom/text "+")))
+                  :item/minted-at item-minted-at}]]))) (e/client (reset! !vis false)))) (dom/props {:class "w upv"}) (dom/text "▲")))
                 (dom/div (dom/props {:class "fi fg bb"})
                 (dom/a (dom/props {:href link :target "_atarashii"}) (dom/text title))))
               (dom/div (dom/props {:class "fr"})
@@ -419,17 +419,17 @@
 
 #?(:clj
     (defn get-reply-count-from-newsitem-id [db newsitem-id]
-      (let [k-kount (->> (xt/q db '{:find [(pull ?r [:xt/id :reply/item-xt-id])]
-                      :where [[?r :reply/item-xt-id newsitem-id]]
-                      :in [newsitem-id]} newsitem-id)
-                    first
-                    count)
-            p-kount (->> (xt/q db '{:find [(pull ?r [:xt/id :reply/item-xt-id])]
-                      :where [[?r :reply/parent-xt-id newsitem-id]]
-                      :in [newsitem-id]} newsitem-id)
-                    first
-                    count)]
-          (+ k-kount p-kount))))
+      (let [direct-replies (->> (xt/q db '{:find [?r]
+                                           :where [[?r :reply/item-xt-id newsitem-id]]
+                                           :in [newsitem-id]} newsitem-id)
+                                (into #{}))
+            parent-replies (->> (xt/q db '{:find [?r]
+                                           :where [[?r :reply/parent-xt-id newsitem-id]]
+                                           :in [newsitem-id]} newsitem-id)
+                                (into #{}))
+            all-replies (clojure.set/union direct-replies parent-replies)
+            count-replies (count all-replies)]
+        count-replies)))
 
 (e/defn ItemView []
   (e/server

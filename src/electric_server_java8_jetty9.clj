@@ -50,6 +50,7 @@
           ;; (res/set-cookie res "username" "guest" {:http-only true :max-age 1})
           (clear-cookie res "nextapexid")
           (clear-cookie res "userhash")
+          (clear-cookie res "loginmoment")
           (clear-cookie res "username")))
       (cookies/wrap-cookies)
       ))
