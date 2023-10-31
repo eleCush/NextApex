@@ -157,6 +157,8 @@
 (e/def current-item-xt-id (e/client (e/watch !current-item-xt-id)))
 #?(:cljs (def !parent-reply-xt-id (atom [])))
 (e/def parent-reply-xt-id (e/client (e/watch !parent-reply-xt-id)))
+#?(:cljs (def !current-tag-id (atom "")))
+(e/def current-tag-id (e/client (e/watch !current-tag-id)))
 
 #?(:cljs (defn handle-response [response]
   (println response)
@@ -288,7 +290,8 @@
           time-since-minted (- e/system-time-ms item-minted-at)
           hrs-since-minted (/ time-since-minted 3600)
           gravity 1.5
-          score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))]
+          score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))
+          tags (:item/tags e)]
       (e/client
       (let [!vis (atom true)
             vis (e/watch !vis)]
@@ -316,13 +319,18 @@
                 (dom/div (dom/props {:class "fi ww"})
                 (dom/text "By:" author))
                 (dom/div (dom/props {:class "fi ww"})
-                (dom/text "⧖" (.toFixed (/ time-since-minted 1000) 2)))
+                (dom/text "⧖" (.toFixed (/ time-since-minted 1000) 0)))
                 (dom/div (dom/props {:class "fi ww"})
                 (dom/text "↑" (.toFixed score 3)))
+                (dom/div (dom/props {:class "fi ww"}))
+                (dom/text tags)
                 (dom/div (dom/props {:class "fiww"})
                 (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url item-id) (reset! !current-item-xt-id xt-id)) (dom/props {:class "discuss"}) (dom/text "select and discuss")))
                 (dom/div (dom/props {:class "fi"})
                 (dom/text ""))
+                (dom/div (dom/props {:class "taglistc fc"})
+                  (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(tags-for-newsitem db id))] (TagItem. id)))
+                  (when (not= "" online-user) (TagCreate. xt-id)))
                 (when (= "R" online-user) 
                   (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))))))
 
@@ -555,3 +563,98 @@
           (map first)
           vec)
       (catch InterruptedException e))))
+
+(e/defn TagCreate [target-xt-id]
+  (e/client
+   (dom/div
+    {:class "fr"}
+    (InputSubmit. "new tag"
+                  (e/fn [v]
+                    (e/server
+                     (let [nid (nid)
+                           db (xt/db !xtdb)
+                           item (xt/entity db target-xt-id)
+                           updated-item (update item :item/tags #(conj (into #{} %) v))]
+                       (println "saving... " updated-item)
+                       (e/discard
+                        (e/offload
+                         #(xt/submit-tx !xtdb
+                                         [[:xtdb.api/put
+                                          {:xt/id nid
+                                            :tag/title v
+                                            :tag/id nid
+                                            :tag/target target-xt-id
+                                            :tag/minted-by online-user
+                                            :tag/minted-at (System/currentTimeMillis)}]
+                                          [:xtdb.api/put updated-item]]))))))))))
+
+#?(:clj
+   (defn tags-for-newsitem [db newsitem-id]
+     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/id :tag/minted-at :tag/title])]
+                     :where [[?t :tag/target nws-id]]
+                     :in [nws-id]} newsitem-id)
+       (map first)
+       (sort-by :tag/minted-at)
+       vec)))
+
+#?(:clj
+   (defn all-tag-records [db]
+     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/id :tag/desc :tag/minted-at :tag/title :tag/member-count])]
+                     :where [[?t :tag/id]]})
+       (map first)
+       (sort-by :tag/minted-at)
+       vec)))
+#?(:clj
+   (defn newsitem-record-by-tag [db in-tag]
+     (try
+       (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes])]
+                        :where [[?i :item/tags nag]]
+                        :in [nag]} in-tag)
+          (map first)
+          (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
+          (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
+          vec)
+        (catch InterruptedException e))))
+
+(e/defn TagItem [id]
+  (e/server
+    (let [e (xt/entity db id)
+          xt-id   (:xt/id e)
+          author (:tag/minted-by e)
+          tag-id (:tag/id e)
+          tag-minted-at (:tag/minted-at e)
+          title (:tag/title e)
+          target-id (:tag/target e)]
+      (e/client
+      (let [!vis (atom true)
+            vis (e/watch !vis)]
+            (dom/div (dom/text title))
+            (when (= "R" online-user) 
+              (ui/button 
+                (e/fn [] 
+                  (e/server
+                    (let [target-entity (xt/entity db target-id)
+                          updated-target (update target-entity :item/tags disj title)]
+                      (e/discard
+                        (xt/submit-tx !xtdb [[:xtdb.api/put updated-target]
+                                            [:xtdb.api/delete xt-id]]))))) 
+                      (dom/text "✗"))))))))
+        ;; (dom/div ;(dom/props {:class ["tagitem" (if (= current-tag-id tag-id) "selecteditem")]})
+        ;;   (dom/div (dom/props {:class "fr fg"})
+        ;;     (dom/div (dom/props {:class "fc"})
+        ;;       (dom/div (dom/props {:class "fr"})
+        ;;        (when (and vis (not= "" online-user))
+        ;;         (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+        ;;           [[:xtdb.api/put
+        ;;           {:xt/id xt-id
+        ;;            :tag/link link
+        ;;            :tag/title title
+        ;;            :tag/id item-id
+        ;;            :tag/target target-id
+        ;;            :tag/minted-by author
+        ;;            :tag/upvotes (inc upvotes)
+        ;;            :tag/minted-at tag-minted-at}]]))) (e/client (reset! !vis false)))) (dom/props {:class "w"}) (dom/text "+")))
+        ;;         (dom/div (dom/props {:class "fi fg bb"})
+        ;;         (ui/button (e/fn []) (dom/text title))))
+
+                ;;))))))))

@@ -21,7 +21,7 @@ body{
 }
 a:hover {color:rgb(22, 219, 163); color: rebeccapurple; transition: text-decoration 1s; text-decoration: underline;}
 a:visited {color:rgb(22, 219, 163); transition: text-decoration 1s;}
-a:link {color:rgb(22, 219, 163);}
+a:link {color:rgb(22, 219, 163); font-size: 1em;}
 a {text-decoration: none;}
 
 input[type="text"]{
@@ -81,7 +81,7 @@ label::first-letter{
 .newsitemlistc {width: 100%;}
 .b {font-weight: 200;}
 .fr {display: flex; flex-direction: row; width: 100%;}
-.fc {display: flex; flex-direction: column;}
+.fc {display: flex; flex-direction: column; width: 100%;}
 .fi {display: flex; flex-grow: 1;}
 .fg {display: flex; flex-grow: 1;}
 
@@ -91,37 +91,57 @@ label::first-letter{
 .fing {display: flex; flex-grow: 0;}
 
 .hdr {background-color: hsl(254, 55%, 35%); color: #fff;}
+.hhdr {background-color: hsl(254, 56%, 24%); color: #fff;}
 .bigc {width: 80%; left: 59.5%; margin-left: -50%; position: absolute;}
 .ra {position: absolute; right: 8px;}
 
-.oo {display: block; width: 100%; border: 0px solid orange;}
+.oo {display: block; width: 100%; border: 0px solid orange; position: relative;}
 
-.in1 {margin-left: 1em;}
-.in2 {margin-left: 2em;}
-.in3 {margin-left: 3em;}
-.in4 {margin-left: 4em;}
-.in5 {margin-left: 5em;}
+.in1 {margin-left: 1em; position: relative;}
+.in2 {margin-left: 2em; position: relative;}
+.in3 {margin-left: 3em; position: relative;}
+.in4 {margin-left: 4em; position: relative;}
+.in5 {margin-left: 5em; position: relative;}
 
 .itemview {overflow: hidden; background-color:hsla(0, 0%, 5%, 0.7);}
-.itemreplies {overflow: hidden; background-color: hsla(48, 83%, 8%, 0.4); border-radius: .1em;}
+.itemreplies {overflow: hidden; background-color: hsla(187, 82%, 11%, 0.4); border-radius: .2em; padding: 0.1em; width: auto;}
 
 .ll {float: left;}
 .rr {float: right;}
-.bb {font-weight: 200; letter-spacing: -0.02222em; font-size: 1.1em;}
+.bb {font-weight: 200; letter-spacing: -0.02222em; font-size: 21px;}
 .reply-input > input {width: 100%;}
-button {font-size: 0.5em;}
+button {font-size: 1.0em; white-space: no-wrap;}
 
 .w {flex: 0;}
 .ww {flex: 0; flex-basis: 1em;}
 .www {flex: 0; flex-basis: 6em;}
-.newsitem {flex-basis: 5em; border-radius: 4px;}
+.newsitem {flex-basis: 5em; border-radius: 4px; transition: background-color .51s;}
+/* .newsitem:hover {background-color:rgb(8, 75, 56); transition: background-color .51s;} */
 .newsitem > .fg > .fc {width: 100%;}
-.ranking {margin: 0.1em 0.7em}
-.discuss {background-color:hsl(166, 85%, 69%); border-radius: 3px; margin-left: 1em;}
+.ranking {margin-top: 0.1em; margin-left: 0.7em}
+
 .kind {height: 1em; display: block; flex: 0;
 position: absolute; bottom: 0; min-width: 180px;}
 .fc {position: relative;}
 .g {color: rgb(83, 234, 78);}
 .nic {margin-top: 3em;}
 .itemview {border: 7px solid black;}
-.selecteditem {background-color: black;}
+.selecteditem {background-color: hsl(0, 0%, 0%, .22);}
+/* button.set-tribe {font-size: 1.2em; background-color: transparent; border: none; color:rgb(22, 219, 163);} */
+/* button.set-tribe:hover {text-decoration: underline;} */
+.selegold {text-shadow: 2px 2px 3px gold; background-color: transparent; border: none;}
+.tribeitem {background-color: hsl(0, 0%, 0%, .1); padding: 0.25em; border-radius: 0.35em;}
+
+/*byutanz*/
+button.set-tribe {background-color:hsl(250, 9%, 13%); color:rgb(203, 214, 211);}
+button {background-color:hsl(250, 9%, 13%); color:rgb(22, 219, 163);}
+.discuss {background-color:hsl(166, 85%, 69%); border-radius: 3px; margin-left: 1em; color: #333;
+    width: 150px;
+    height: 25px;
+    white-space: nowrap;}
+.discuss:hover {cursor:pointer;}
+.gry {color:hsla(0, 0%, 100%, 0.7);}
+.tinylogo {width: 25px; border: 1px solid #fff;}
+.upv {opacity: 0.9; border-width: 0; cursor:pointer;}
+#footer {position: fixed; bottom: 0; right: 0; z-index: 3000; background-color: #111; padding: 1em;} 
+#footer > ul {list-style: none; text-align: center;}
