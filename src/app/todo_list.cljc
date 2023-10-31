@@ -586,19 +586,15 @@
                                             :tag/target target-xt-id
                                             :tag/minted-by online-user
                                             :tag/minted-at (System/currentTimeMillis)
-                                            :tag/upvotes-set 0
-                                            :tag/upvotes 0
-                                            :tag/downvotes-set 0
-                                            :tag/downvotes 0}]
+                                            :tag/upvotes-set #{}}]
                                           [:xtdb.api/put updated-item]]))))))))))
 
 #?(:clj
    (defn tags-for-newsitem [db newsitem-id]
-     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/id :tag/minted-at :tag/title])]
+     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/id :tag/minted-at :tag/title :tag/upvotes-set])]
                      :where [[?t :tag/target nws-id]]
                      :in [nws-id]} newsitem-id)
        (map first)
-       ;(sort-by :tag/minted-at)
        vec)))
 
 #?(:clj
@@ -632,20 +628,33 @@
           upvotes-set (:tag/upvotes-set e)
           upvotes (:tag/upvotes e)
           downvotes-set (:tag/downvotes-set e)
-          downvotes (:tag/downvotes e)]
+          downvotes (:tag/downvotes e)
+          ;;user verification, u is username.  should probably use user-id xDDDD
+          u  (get-in e/*http-request* [:cookies "username" :value])
+          lm (get-in e/*http-request* [:cookies "loginmoment" :value])
+          uh (get-in e/*http-request* [:cookies "userhash" :value])
+          vw (verify-with :argon2 (str lm u) uh)]
       (e/client
         (dom/div (dom/props {:class "fr"})
           (dom/div (dom/props {:class "fc"})
             (dom/div (dom/props {:class "upvote-tag"})
               (ui/button 
-                (e/fn []) 
-                (dom/props {}) 
-                (dom/text "▲")))
-            (dom/div (dom/props {:class "downvote-tag"})
-              (ui/button 
-                (e/fn []) 
-                (dom/props {}) 
-                (dom/text "▼"))))
+                (e/fn [] 
+                  (e/server
+                    (e/offload
+                      #(xt/submit-tx !xtdb 
+                                    [[:xtdb.api/put 
+                                      (if (and (contains? upvotes-set u) vw) ;;vw is verified login
+                                        ;; If user has upvoted, remove their upvote
+                                        (-> e
+                                            (update :tag/upvotes-set disj u)
+                                            (update :tag/upvotes dec))
+                                        ;; If user hasn't upvoted, add their upvote
+                                        (-> e
+                                            (update :tag/upvotes-set conj u)
+                                            (update :tag/upvotes inc)))]]))))
+                (dom/props {:class (if (contains? upvotes-set u) "alreadyupvoted" "notyetupvoted")}) 
+                (dom/text "▲"))))
           (dom/div (dom/props {:class "fc"})
             (dom/div (dom/text title)))
           (when (= "R" online-user) 
