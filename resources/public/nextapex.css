@@ -145,5 +145,5 @@ button {background-color:hsl(250, 9%, 13%); color:rgb(22, 219, 163);}
 .upv {opacity: 0.9; border-width: 0; cursor:pointer;}
 #footer {position: fixed; bottom: 0; right: 0; z-index: 3000; background-color: #111; padding: 1em;} 
 #footer > ul {list-style: none; text-align: center;}
-.alreadyupvoted {color: hsl(145, 76%, 49%); border: none;}
-.notyetupvoted {color: hsla(145, 76%, 49%, 0.342); border: none;}
+.alreadyupvoted {color: hsl(145, 76%, 49%); border: none; cursor:pointer;}
+.notyetupvoted {color: hsla(145, 76%, 49%, 0.342); border: none; cursor:pointer;}

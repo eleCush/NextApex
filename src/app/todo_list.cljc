@@ -586,15 +586,17 @@
                                             :tag/target target-xt-id
                                             :tag/minted-by online-user
                                             :tag/minted-at (System/currentTimeMillis)
-                                            :tag/upvotes-set #{}}]
+                                            :tag/upvotes-set #{}
+                                            :tag/upvotes 0}]
                                           [:xtdb.api/put updated-item]]))))))))))
 
 #?(:clj
    (defn tags-for-newsitem [db newsitem-id]
-     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/id :tag/minted-at :tag/title :tag/upvotes-set])]
+     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/id :tag/minted-at :tag/title :tag/upvotes-set :tag/upvotes])]
                      :where [[?t :tag/target nws-id]]
                      :in [nws-id]} newsitem-id)
        (map first)
+       (sort-by :tag/upvotes >)
        vec)))
 
 #?(:clj
