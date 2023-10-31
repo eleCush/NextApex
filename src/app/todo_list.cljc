@@ -585,7 +585,11 @@
                                             :tag/id nid
                                             :tag/target target-xt-id
                                             :tag/minted-by online-user
-                                            :tag/minted-at (System/currentTimeMillis)}]
+                                            :tag/minted-at (System/currentTimeMillis)
+                                            :tag/upvotes-set 0
+                                            :tag/upvotes 0
+                                            :tag/downvotes-set 0
+                                            :tag/downvotes 0}]
                                           [:xtdb.api/put updated-item]]))))))))))
 
 #?(:clj
@@ -594,7 +598,7 @@
                      :where [[?t :tag/target nws-id]]
                      :in [nws-id]} newsitem-id)
        (map first)
-       (sort-by :tag/minted-at)
+       ;(sort-by :tag/minted-at)
        vec)))
 
 #?(:clj
@@ -624,37 +628,34 @@
           tag-id (:tag/id e)
           tag-minted-at (:tag/minted-at e)
           title (:tag/title e)
-          target-id (:tag/target e)]
+          target-id (:tag/target e)
+          upvotes-set (:tag/upvotes-set e)
+          upvotes (:tag/upvotes e)
+          downvotes-set (:tag/downvotes-set e)
+          downvotes (:tag/downvotes e)]
       (e/client
-      (let [!vis (atom true)
-            vis (e/watch !vis)]
-            (dom/div (dom/text title))
-            (when (= "R" online-user) 
+        (dom/div (dom/props {:class "fr"})
+          (dom/div (dom/props {:class "fc"})
+            (dom/div (dom/props {:class "upvote-tag"})
               (ui/button 
-                (e/fn [] 
-                  (e/server
-                    (let [target-entity (xt/entity db target-id)
-                          updated-target (update target-entity :item/tags disj title)]
-                      (e/discard
-                        (xt/submit-tx !xtdb [[:xtdb.api/put updated-target]
-                                            [:xtdb.api/delete xt-id]]))))) 
-                      (dom/text "✗"))))))))
-        ;; (dom/div ;(dom/props {:class ["tagitem" (if (= current-tag-id tag-id) "selecteditem")]})
-        ;;   (dom/div (dom/props {:class "fr fg"})
-        ;;     (dom/div (dom/props {:class "fc"})
-        ;;       (dom/div (dom/props {:class "fr"})
-        ;;        (when (and vis (not= "" online-user))
-        ;;         (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
-        ;;           [[:xtdb.api/put
-        ;;           {:xt/id xt-id
-        ;;            :tag/link link
-        ;;            :tag/title title
-        ;;            :tag/id item-id
-        ;;            :tag/target target-id
-        ;;            :tag/minted-by author
-        ;;            :tag/upvotes (inc upvotes)
-        ;;            :tag/minted-at tag-minted-at}]]))) (e/client (reset! !vis false)))) (dom/props {:class "w"}) (dom/text "+")))
-        ;;         (dom/div (dom/props {:class "fi fg bb"})
-        ;;         (ui/button (e/fn []) (dom/text title))))
-
-                ;;))))))))
+                (e/fn []) 
+                (dom/props {}) 
+                (dom/text "▲")))
+            (dom/div (dom/props {:class "downvote-tag"})
+              (ui/button 
+                (e/fn []) 
+                (dom/props {}) 
+                (dom/text "▼"))))
+          (dom/div (dom/props {:class "fc"})
+            (dom/div (dom/text title)))
+          (when (= "R" online-user) 
+            (dom/div (dom/props {:class "fc"})
+              (ui/button 
+              (e/fn [] 
+                (e/server
+                  (let [target-entity (xt/entity db target-id)
+                        updated-target (update target-entity :item/tags disj title)]
+                    (e/discard
+                      (xt/submit-tx !xtdb [[:xtdb.api/put updated-target]
+                                          [:xtdb.api/delete xt-id]]))))) 
+                    (dom/text "✗")))))))))
