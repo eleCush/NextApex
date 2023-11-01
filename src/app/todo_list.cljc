@@ -644,7 +644,7 @@
        vec)))
 
 (e/defn TagItem [id]
-  (e/server
+  (e/server 
     (let [e (xt/entity db id)
           xt-id   (:xt/id e)
           author (:tag/minted-by e)
@@ -654,48 +654,50 @@
           target-id (:tag/target e)
           upvotes-set (:tag/upvotes-set e #{})
           upvotes (:tag/upvotes e)]
-      (e/client
-        (.log js/console "here: " id title)
-        (dom/div (dom/props {:class "fr"})
+            (e/client
+              (if (not= "" online-user)
+                (ui/button 
+                  (e/fn [] 
+                    (e/server
+                      (e/offload
+                        #(xt/submit-tx !xtdb 
+                                      [[:xtdb.api/put 
+                                        (if (contains? upvotes-set online-user)
+                                          ;; user has upvoted, remove their upvote
+                                          (-> e
+                                              (update :tag/upvotes-set disj online-user)
+                                              (update :tag/upvotes dec))
+                                          ;; user hasn't upvoted, include their upvote
+                                          (-> e
+                                              (update :tag/upvotes-set conj online-user)
+                                              (update :tag/upvotes inc)))]]))))
+                  (if (contains? upvotes-set online-user) 
+                    (dom/props {:class "alreadyupvoted"})
+                    (dom/props {:class "notyetupvoted"}))
+                  (dom/text "▲ " (count upvotes-set))))
+                (dom/text title)))))
+
+
+;;         (dom/div (dom/props {:class "fr"})
           
-          (dom/div (dom/props {:class "fc atag"})
-            (dom/div (dom/props {:class "upvote-tag"})
-             (if (not= "" online-user)
-              (ui/button 
-                (e/fn [] 
-                  (e/server
-                    (e/offload
-                      #(xt/submit-tx !xtdb 
-                                    [[:xtdb.api/put 
-                                      (if (contains? upvotes-set online-user)
-                                        ;; user has upvoted, remove their upvote
-                                        (-> e
-                                            (update :tag/upvotes-set disj online-user)
-                                            (update :tag/upvotes dec))
-                                        ;; user hasn't upvoted, include their upvote
-                                        (-> e
-                                            (update :tag/upvotes-set conj online-user)
-                                            (update :tag/upvotes inc)))]]))))
-                (if (contains? upvotes-set online-user) 
-                  (dom/props {:class "alreadyupvoted"})
-                  (dom/props {:class "notyetupvoted"}))
-                (dom/text "▲ " (count upvotes-set)))
-                (dom/div (dom/text "▲ " (count upvotes-set)))))
-            (dom/div 
-              (dom/props {:class ""}) 
-              (dom/text title)))
-          (when (= "R" online-user) 
-            (dom/div (dom/props {:class "fc"})
-              (ui/button 
-              (e/fn [] 
-                (e/server
-                  (let [target-entity (xt/entity db target-id)
-                        updated-target (update target-entity :item/tags disj title)]
-                    (e/discard
-                      (xt/submit-tx !xtdb [[:xtdb.api/put updated-target]
-                                          [:xtdb.api/delete xt-id]]))))) 
-                    (dom/props {:class "delete"})
-                    (dom/text "✗")))))))))
+              ;;     (dom/div (dom/text "▲ " (count upvotes-set)))))
+              ;; (dom/div 
+              ;;   (dom/props {:class ""}) 
+;;           (dom/div (dom/props {:class "fc atag"})
+;;             (dom/div (dom/props {:class "upvote-tag"})
+             
+;;           (when (= "R" online-user) 
+;;             (dom/div (dom/props {:class "fc"})
+;;               (ui/button 
+;;               (e/fn [] 
+;;                 (e/server
+;;                   (let [target-entity (xt/entity db target-id)
+;;                         updated-target (update target-entity :item/tags disj title)]
+;;                     (e/discard
+;;                       (xt/submit-tx !xtdb [[:xtdb.api/put updated-target]
+;;                                           [:xtdb.api/delete xt-id]]))))) 
+;;                     (dom/props {:class "delete"})
+;;                     (dom/text "✗")))))))))
 
 
 #?(:cljs  (def app-version "0.0.1.0.0.0.3"))
