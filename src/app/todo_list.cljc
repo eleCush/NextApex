@@ -314,7 +314,7 @@
             vis (e/watch !vis)]
         (dom/div (dom/props {:class ["newsitem" (if (= current-item-id item-id) "selecteditem")]})
           (dom/div (dom/props {:class "fr fg"})
-            (when (not= 0 rank) (dom/div (dom/props {:class "ranking"}) (dom/text rank ".")))
+            (when (< 0 rank) (dom/div (dom/props {:class "ranking"}) (dom/text rank ".")))
             (dom/div (dom/props {:class "fc"})
               (dom/div (dom/props {:class "fr"})
                (when (and vis (not= "" online-user))
@@ -441,7 +441,7 @@
                 (ReplyCreate. xt-id xt-id))
             
               (dom/div (dom/props {:class "replies"})
-                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemNestedReplies. id))))
+                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemReply. id))))
                 
                 
                 )))))))
@@ -465,10 +465,10 @@
             (dom/div (dom/props {:class ""})
               (NestedReplyCreate. current-item-xt-id xt-id))        
             (dom/div (dom/props {:class "replies"})
-              (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (ItemReply. id)))))
+              (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (when id (ItemReply. id)))))
             (dom/div (dom/props {:class ""})
              (when (= "R" online-user) 
-              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗"))))))))
+              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗")))))))))
 
 (e/defn ItemReply [xt-id]
   (e/server
@@ -488,7 +488,7 @@
           (dom/div (dom/props {:class ""})
             (NestedReplyCreate. current-item-xt-id xt-id))
           (dom/div (dom/props {:class ""})
-             (dom/div (dom/props {:class "replies "})
+             (dom/div (dom/props {:class "replies"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyB. id)))))
           (dom/div (dom/props {:class ""})
            (when (= "R" online-user) 
@@ -679,7 +679,7 @@
                   ;;else
                   (dom/div (dom/props {:class "atag"}) (dom/text "▲ " (count upvotes-set) " " title)))))))
 
-#?(:cljs  (def app-version "0.0.0.1.2.2.2.1"))
+#?(:cljs  (def app-version "0.0.0.1.2.2.2.1.0"))
 
 #?(:cljs (defn save-version-to-storage [version]
           (.setItem (.-localStorage js/window) "appVersion" version)))
