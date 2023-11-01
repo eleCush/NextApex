@@ -32,7 +32,10 @@
 
 (e/defn Link-and-Chat-UI [username]
     (dom/div (dom/props {:class "newsitemlistc fc"})
-        (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(newsitem-records db))] (NewsItem. id rank)))
+        (if (not= "" current-item-id)
+          (NewsItem. current-item-id "0")
+          (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(newsitem-records db))] (NewsItem. id rank))))
+        
         (when (not= "" online-user) (NewsItemCreate.)))
     (dom/ul (dom/props {:class "fc"})
      (e/server
@@ -60,7 +63,7 @@
                                   )
                                  (set! (.-value dom/node) "")))))))))
       (dom/ul (dom/props {:class "fc"})
-      (dom/div (dom/text "Online: ") (dom/props {:class "gcui"}))
+      (dom/div (dom/props {:class "eline"}) (dom/text "Online Now ") (dom/props {:class "gcui"}))
       (e/server
         (e/for-by first [[session-id username] present]
                   (e/client
@@ -227,7 +230,15 @@
     (binding [!xtdb user/!xtdb
               db (new (db/latest-db> user/!xtdb))]
         (e/client
-          (when (e/server (verify-with :argon2 (str lm u) uh)) (reset! !online-user u) (reset! !online-user "")) ;;check session, set cljs var
+          (check-version-and-reload)
+          (when (not (empty? uh)) (if (e/server (verify-with :argon2 (str lm u) uh)) (do (reset! !online-user u) (reset! !online-user "")))) ;;check session, set cljs var
+          (let [sta (rest (clojure.string/split (get-current-path) "/" ))]
+            (when (= 1 (count sta))
+              (reset! !current-item-id (first sta))
+              (reset! !current-item-xt-id (first sta)))
+;            (println "sta: " sta)
+            ;(println (first sta))
+            )
           (dom/div (dom/props {:class "bigc"})
             (dom/div (dom/props {:class "fr hdr"})
               (dom/div (dom/props {:class "fi"})
@@ -246,8 +257,9 @@
                     (dom/text "Logout"))
                   (LoginPart.)))
             (dom/div (dom/props {:class "fr"})
+              (when (not= "" current-item-id) (ui/button (e/fn [] (reset! !current-item-id "") (reset! !current-item-xt-id)) (dom/text "<")))
               (dom/div (dom/props {:class "fi"})
-                (dom/text (e/client current-item-id)))
+                (dom/text current-item-id))
               (dom/div (dom/props {:class "fi"})
                 (case view
                   :main  (do
@@ -263,12 +275,13 @@
                   :main (Link-and-Chat-Extended.))))
             (dom/div (dom/props {:class "fr"})
               (reset! !current-item-xt-id (subs (get-current-path) 1))
-              (when current-item-xt-id (ItemView.)))
+              (when (not= "" current-item-xt-id) (ItemView.)))
             (dom/h1 (dom/text "welcome to NextApex.co"))
             (dom/p (dom/text "realtime link share"))
             (dom/hr)
-            (dom/div (dom/props {:class "userlistc fc"})
-              (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id))))
+            (when (= "R" online-user)
+              (dom/div (dom/props {:class "userlistc fc"})
+               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id)))))
             (dom/hr)
             (if (not= "" create-account-msg) 
               (dom/div (dom/text create-account-msg))
@@ -289,15 +302,16 @@
           upvotes (or (:item/upvotes e) 0)
           time-since-minted (- e/system-time-ms item-minted-at)
           hrs-since-minted (/ time-since-minted 3600)
-          gravity 1.5
-          score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))
-          tags (:item/tags e)]
+          gravity 1.1
+          score (* 100 (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity)))
+          tags (:item/tags e)
+          reply-count (e/server (e/offload #(get-reply-count-from-newsitem-id db xt-id)))]
       (e/client
       (let [!vis (atom true)
             vis (e/watch !vis)]
         (dom/div (dom/props {:class ["newsitem" (if (= current-item-id item-id) "selecteditem")]})
           (dom/div (dom/props {:class "fr fg"})
-            (dom/div (dom/props {:class "ranking"}) (dom/text rank "."))
+            (when (not= 0 rank) (dom/div (dom/props {:class "ranking"}) (dom/text rank ".")))
             (dom/div (dom/props {:class "fc"})
               (dom/div (dom/props {:class "fr"})
                (when (and vis (not= "" online-user))
@@ -310,29 +324,28 @@
                   :item/id item-id
                   :item/minted-by author
                   :item/upvotes (inc upvotes)
-                  :item/minted-at item-minted-at}]]))) (e/client (reset! !vis false)))) (dom/props {:class "w"}) (dom/text "+")))
+                  :item/minted-at item-minted-at}]]))) (e/client (reset! !vis false)))) (dom/props {:class ["w" "upvotebutton"]}) (dom/text "▲")))
                 (dom/div (dom/props {:class "fi fg bb"})
                 (dom/a (dom/props {:href link :target "_atarashii"}) (dom/text title))))
-              (dom/div (dom/props {:class "fr"})  
-                (dom/div (dom/props {:class "fi w"})
-                (dom/text upvotes))
+              (dom/div (dom/props {:class "fr gr"})  
+                (dom/div (dom/props {:class "fi w pts"})
+                (dom/text upvotes (if (= 1 upvotes) " point" " points")))
                 (dom/div (dom/props {:class "fi ww"})
                 (dom/text "By:" author))
-                (dom/div (dom/props {:class "fi ww"})
-                (dom/text "⧖" (.toFixed (/ time-since-minted 1000) 0)))
-                (dom/div (dom/props {:class "fi ww"})
-                (dom/text "↑" (.toFixed score 3)))
-                (dom/div (dom/props {:class "fi ww"}))
-                (dom/text tags)
+                (dom/div (dom/props {:class "fi ww nbrk"})
+                (dom/text "⧖" (.toFixed (/ time-since-minted (* 60 1000 60)) 0) " hours ago"))
+                (dom/div (dom/props {:class "fi ww" :alt "Newtonian (anti-gravity)"})
+                (dom/text "↑" (.toFixed score 0)))
                 (dom/div (dom/props {:class "fiww"})
-                (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url item-id) (reset! !current-item-xt-id xt-id)) (dom/props {:class "discuss"}) (dom/text "select and discuss")))
+                (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url item-id) (reset! !current-item-xt-id xt-id)) (dom/props {:class "discuss"}) (dom/text reply-count (if (= 1 reply-count) " comment" " comments"))))
                 (dom/div (dom/props {:class "fi"})
-                (dom/text ""))
-                (dom/div (dom/props {:class "taglistc fc"})
+                (dom/text "")))
+              (dom/div (dom/props {:class "taglistc fr"})
                   (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(tags-for-newsitem db id))] (TagItem. id)))
                   (when (not= "" online-user) (TagCreate. xt-id)))
+              (dom/div (dom/props {:class "xxc fr"})
                 (when (= "R" online-user) 
-                  (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))))))
+                  (ui/button (e/fn [v] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗"))))))))))))
 
 #?(:cljs (def !ii-link-to-add (atom "")))
 (e/def ii-link-to-add (e/client (e/watch !ii-link-to-add)))
@@ -343,9 +356,12 @@
 (e/defn NewsItemCreate [] 
   (e/client 
     (dom/div (dom/props {:class "nic"})
+       (dom/label (dom/text "Link:"))
        (dom/input (dom/props {:placeholder "link to add"})
                   (dom/on "change" (e/fn [e]
                                      (reset! !ii-link-to-add (.-value dom/node)))))
+       (dom/br)
+       (dom/label (dom/text "Title:"))
        (dom/input (dom/props {:placeholder "title"})
                   (dom/on "change" (e/fn [e]
                                      (reset! !ii-title-to-add (.-value dom/node)))))
@@ -374,14 +390,29 @@
 
 #?(:clj
    (defn newsitem-records [db]
+    (let [gravity 1.1]
      (try
        (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes])]
                         :where [[?i :item/id]]})
           (map first)
-          (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
+          (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.1)) >) ;;score
           (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
           vec)
-        (catch InterruptedException e))))
+        (catch InterruptedException e)))))
+
+#?(:clj
+    (defn get-reply-count-from-newsitem-id [db newsitem-id]
+      (let [direct-replies (->> (xt/q db '{:find [?r]
+                                           :where [[?r :reply/item-xt-id newsitem-id]]
+                                           :in [newsitem-id]} newsitem-id)
+                                (into #{}))
+            parent-replies (->> (xt/q db '{:find [?r]
+                                           :where [[?r :reply/parent-xt-id newsitem-id]]
+                                           :in [newsitem-id]} newsitem-id)
+                                (into #{}))
+            all-replies (clojure.set/union direct-replies parent-replies)
+            count-replies (count all-replies)]
+        count-replies)))
 
 (e/defn ItemView []
   (e/server
@@ -407,7 +438,10 @@
                 (ReplyCreate. xt-id xt-id))
             
               (dom/div (dom/props {:class "replies"})
-                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemNestedReplies. id)))))))))))
+                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemNestedReplies. id))))
+                
+                
+                )))))))
 
 (e/defn ItemNestedReplies [xt-id]
   (e/server
@@ -431,7 +465,7 @@
               (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (ItemReply. id)))))
             (dom/div (dom/props {:class ""})
              (when (= "R" online-user) 
-              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗"))))))))
+              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗"))))))))
 
 (e/defn ItemReply [xt-id]
   (e/server
@@ -455,7 +489,7 @@
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyB. id)))))
           (dom/div (dom/props {:class ""})
            (when (= "R" online-user) 
-             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
+             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗")))))))))
 
 (e/defn ItemReplyB [xt-id]
   (e/server
@@ -479,7 +513,7 @@
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyC. id)))))
           (dom/div (dom/props {:class ""})
            (when (= "R" online-user) 
-             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
+             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗")))))))))
 
 (e/defn ItemReplyC [xt-id]
   (e/server
@@ -503,7 +537,7 @@
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyD. id)))))
           (dom/div (dom/props {:class ""})
            (when (= "R" online-user) 
-             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
+             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗")))))))))
 
 (e/defn ItemReplyD [xt-id]
   (e/server
@@ -522,7 +556,7 @@
             (dom/text author))
           (dom/div (dom/props {:class ""})
            (when (= "R" online-user) 
-             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/text "✗")))))))))
+             (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗")))))))))
 
 (e/defn ReplyCreate [item-xt-id parent-xt-id] 
   (e/client (when (and item-xt-id parent-xt-id (not= "" online-user)) 
@@ -556,10 +590,10 @@
 #?(:clj
    (defn reply-with-descendant-records [db item-xt-id parent-xt-id]
      (try
-        (->> (xt/q db '{:find [(pull ?r [:xt/id :reply/text :reply/item-xt-id :reply/parent-xt-id :reply/upvotes])]
+        (->> (xt/q db '{:find  [(pull ?r [:xt/id :reply/text :reply/item-xt-id :reply/parent-xt-id :reply/upvotes])]
                         :where [[?r :reply/item-xt-id item-xt-id]
                                 [?r :reply/parent-xt-id parent-xt-id]]
-                        :in [item-xt-id parent-xt-id]} item-xt-id parent-xt-id)
+                        :in    [item-xt-id parent-xt-id]} item-xt-id parent-xt-id)
           (map first)
           vec)
       (catch InterruptedException e))))
@@ -567,7 +601,7 @@
 (e/defn TagCreate [target-xt-id]
   (e/client
    (dom/div
-    {:class "fr"}
+    (dom/props {:class ["fr" "tagc"]})
     (InputSubmit. "new tag"
                   (e/fn [v]
                     (e/server
@@ -596,7 +630,7 @@
                      :where [[?t :tag/target nws-id]]
                      :in [nws-id]} newsitem-id)
        (map first)
-       (sort-by :tag/upvotes >)
+      ;;  (sort-by :tag/upvotes >)
        vec)))
 
 #?(:clj
@@ -609,9 +643,9 @@
 #?(:clj
    (defn newsitem-record-by-tag [db in-tag]
      (try
-       (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes])]
+       (->> (xt/q db '{:find   [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes])]
                         :where [[?i :item/tags nag]]
-                        :in [nag]} in-tag)
+                        :in    [nag]} in-tag)
           (map first)
           (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
           (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
@@ -627,38 +661,37 @@
           tag-minted-at (:tag/minted-at e)
           title (:tag/title e)
           target-id (:tag/target e)
-          upvotes-set (:tag/upvotes-set e)
+          upvotes-set (:tag/upvotes-set e #{})
           upvotes (:tag/upvotes e)
           downvotes-set (:tag/downvotes-set e)
-          downvotes (:tag/downvotes e)
-          ;;user verification, u is username.  should probably use user-id xDDDD
-          u  (get-in e/*http-request* [:cookies "username" :value])
-          lm (get-in e/*http-request* [:cookies "loginmoment" :value])
-          uh (get-in e/*http-request* [:cookies "userhash" :value])
-          vw (verify-with :argon2 (str lm u) uh)]
+          downvotes (:tag/downvotes e)]
       (e/client
         (dom/div (dom/props {:class "fr"})
-          (dom/div (dom/props {:class "fc"})
+          (dom/div (dom/props {:class "fc"}))
+          (dom/div (dom/props {:class "fc atag"})
             (dom/div (dom/props {:class "upvote-tag"})
+             (if (not= "" online-user)
               (ui/button 
                 (e/fn [] 
                   (e/server
                     (e/offload
                       #(xt/submit-tx !xtdb 
                                     [[:xtdb.api/put 
-                                      (if (and (contains? upvotes-set u) vw) ;;vw is verified login
-                                        ;; If user has upvoted, remove their upvote
+                                      (if (contains? upvotes-set online-user) ;;vw is verified login
+                                        ;; user has upvoted, remove their upvote
                                         (-> e
-                                            (update :tag/upvotes-set disj u)
+                                            (update :tag/upvotes-set disj online-user)
                                             (update :tag/upvotes dec))
-                                        ;; If user hasn't upvoted, add their upvote
+                                        ;; user hasn't upvoted, include their upvote
                                         (-> e
-                                            (update :tag/upvotes-set conj u)
+                                            (update :tag/upvotes-set conj online-user)
                                             (update :tag/upvotes inc)))]]))))
-                (dom/props {:class (if (contains? upvotes-set u) "alreadyupvoted" "notyetupvoted")}) 
-                (dom/text "▲"))))
-          (dom/div (dom/props {:class "fc"})
-            (dom/div (dom/text title)))
+                (dom/props {:class (if (contains? upvotes-set online-user) "alreadyupvoted" "notyetupvoted")}) 
+                (dom/text "▲ " (count upvotes-set)))
+                (dom/div (dom/text "▲ " (count upvotes-set)))))
+            (dom/div 
+              (dom/props {:class ""}) 
+              (dom/text title)))
           (when (= "R" online-user) 
             (dom/div (dom/props {:class "fc"})
               (ui/button 
@@ -669,4 +702,24 @@
                     (e/discard
                       (xt/submit-tx !xtdb [[:xtdb.api/put updated-target]
                                           [:xtdb.api/delete xt-id]]))))) 
+                    (dom/props {:class "delete"})
                     (dom/text "✗")))))))))
+
+
+#?(:cljs  (def app-version "0.0.1.0.0.0.2"))
+
+#?(:cljs (defn save-version-to-storage [version]
+          (.setItem (.-localStorage js/window) "appVersion" version)))
+
+#?(:cljs  (defn get-version-from-storage []
+            (.getItem (.-localStorage js/window) "appVersion")))
+
+#?(:cljs (defn reload-page []
+          (.reload js/location true)))
+
+#?(:cljs (defn check-version-and-reload []
+          (let [stored-version (get-version-from-storage)]
+            (if (not= stored-version app-version)
+              (do (save-version-to-storage app-version)
+                  (reload-page))
+              (println "NextApex.co V" app-version ", freshed fetches.")))))
