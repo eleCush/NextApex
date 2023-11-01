@@ -672,35 +672,14 @@
                                               (update :tag/upvotes-set conj online-user)
                                               (update :tag/upvotes inc)))]]))))
                   (if (contains? upvotes-set online-user) 
-                    (dom/props {:class "alreadyupvoted"})
-                    (dom/props {:class "notyetupvoted"}))
-                  (dom/text "▲ " (count upvotes-set))))
-                (dom/text title)))))
+                    (dom/div (dom/props {:class "alreadyupvoted"}) (dom/text "▲ " (count upvotes-set)))
+                    (dom/div (dom/props {:class "notyetupvoted"}) (dom/text "▲ " (count upvotes-set))))
+                  (dom/text  " " title)
+                  (dom/props {:class "atag"}))
+                  ;;else
+                  (dom/div (dom/props {:class "atag"}) (dom/text "▲ " (count upvotes-set) " " title)))))))
 
-
-;;         (dom/div (dom/props {:class "fr"})
-          
-              ;;     (dom/div (dom/text "▲ " (count upvotes-set)))))
-              ;; (dom/div 
-              ;;   (dom/props {:class ""}) 
-;;           (dom/div (dom/props {:class "fc atag"})
-;;             (dom/div (dom/props {:class "upvote-tag"})
-             
-;;           (when (= "R" online-user) 
-;;             (dom/div (dom/props {:class "fc"})
-;;               (ui/button 
-;;               (e/fn [] 
-;;                 (e/server
-;;                   (let [target-entity (xt/entity db target-id)
-;;                         updated-target (update target-entity :item/tags disj title)]
-;;                     (e/discard
-;;                       (xt/submit-tx !xtdb [[:xtdb.api/put updated-target]
-;;                                           [:xtdb.api/delete xt-id]]))))) 
-;;                     (dom/props {:class "delete"})
-;;                     (dom/text "✗")))))))))
-
-
-#?(:cljs  (def app-version "0.0.1.0.0.0.3"))
+#?(:cljs  (def app-version "0.0.0.1.2.2.2.1"))
 
 #?(:cljs (defn save-version-to-storage [version]
           (.setItem (.-localStorage js/window) "appVersion" version)))
