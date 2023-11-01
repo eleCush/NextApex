@@ -145,6 +145,8 @@
 (e/def lpw (e/client (e/watch loginn-str)))
 #?(:cljs (def !ca-usrname (atom "")))
 (e/def ca-usrname (e/client (e/watch !ca-usrname)))
+#?(:cljs (def !ca-usr-email (atom "")))
+(e/def ca-usr-email (e/client (e/watch !ca-usr-email)))
 #?(:cljs (def !ca-password (atom "")))
 (e/def ca-password (e/client (e/watch !ca-password)))
 #?(:cljs (def !online-user (atom "")))
@@ -198,32 +200,36 @@
 
 (e/defn CreateAccountPart []
  (e/client
-  (if create-account-visible 
-   (do
-  (dom/input (dom/props {:placeholder "username"})
-                 (dom/on "change" (e/fn [e]
-                                     (reset! !ca-usrname (.-value dom/node) ))))
-  (dom/input (dom/props {:placeholder "password" :type "password"})
-                 (dom/on "change" (e/fn [e]
-                                     (reset! !ca-password (.-value dom/node) ))))
-  (ui/button (e/fn []
-               (if (and (not (empty? ca-password)) (<= 2 (count ca-usrname)))
-                (do
-                 (e/client (reset! !create-account-msg "Creating account..."))
-                 (e/server (e/discard  (e/offload  #(xt/submit-tx !xtdb [[:xtdb.api/put
-                  {:xt/id (random-uuid)
-                  :user/id (nid)
-                  :user/minted-at (System/currentTimeMillis)
-                  :user/username ca-usrname
-                  :user/password (str (hash-with :argon2 ca-password))}]]))))
-                 (e/client (reset! !create-account-msg "Account created.")))
-      (e/client (reset! !create-account-msg "Must be 2 chars or more and have a password.")))
-    )
+  (if create-account-visible
+   (let [valid-email? (fn [email] (re-matches  #"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)" email))]
+    (dom/input (dom/props {:placeholder "username"})
+                  (dom/on "change" (e/fn [e]
+                                      (reset! !ca-usrname (.-value dom/node) ))))
+    (dom/input (dom/props {:placeholder "email"})
+                  (dom/on "change" (e/fn [e]
+                                      (reset! !ca-usr-email (.-value dom/node) ))))
+    (dom/input (dom/props {:placeholder "password" :type "password"})
+                  (dom/on "change" (e/fn [e]
+                                      (reset! !ca-password (.-value dom/node) ))))
+    (ui/button (e/fn []
+                (if (and (not (empty? ca-password)) (valid-email? ca-usr-email) (<= 2 (count ca-usrname)))
+                  (do
+                  (e/client (reset! !create-account-msg "Creating account..."))
+                  (e/server (e/discard  (e/offload  #(xt/submit-tx !xtdb [[:xtdb.api/put
+                    {:xt/id (random-uuid)
+                    :user/id (nid)
+                    :user/minted-at (System/currentTimeMillis)
+                    :user/username ca-usrname
+                    :user/email ca-usr-email
+                    :user/password (str (hash-with :argon2 ca-password))}]]))))
+                  (e/client (reset! !create-account-msg "Account created.")))
+        (e/client (reset! !create-account-msg "Must be 2 chars+, valid email, and have a password.")))
+      )
 
-      (dom/text "Create Account"))
-      (ui/button (e/fn [] (reset! !create-account-visible false)) (dom/text "✗")))
-      ;
-      ;else
+        (dom/text "Create Account"))
+        (ui/button (e/fn [] (reset! !create-account-visible false)) (dom/text "✗")))
+        ;
+        ;else
       (ui/button (e/fn [] (reset! !create-account-visible true)) (dom/text "create an account...")))))
 
 (e/defn Todo-list []
@@ -279,9 +285,14 @@
             (dom/div (dom/props {:class "fr"})
               (reset! !current-item-xt-id (subs (get-current-path) 1))
               (when (not= "" current-item-xt-id) (ItemView.)))
-            (dom/h1 (dom/text "welcome to NextApex.co"))
-            (dom/p (dom/text "realtime link share"))
-            (dom/hr)
+            (when (= "" current-item-xt-id)    (dom/h1 (dom/text "Welcome to NextApex.co")))
+            (when (= "" current-item-xt-id)    (dom/p (dom/text "Dynamic & Realtime Link Share")))
+            (when (= "" current-item-xt-id)    (dom/p (dom/text "Create an account with valid email below")))
+            (when (= "" current-item-xt-id)    (dom/p (dom/text "Once logged in, you can submit links with titles, upvote links, comment and reply on specific links by clicking # comments")))
+            (when (= "" current-item-xt-id)    (dom/p (dom/text "You can tag items and upvote the tags on items to help keep our collection organized long into the future")))
+            (when (= "" current-item-xt-id)    (dom/p (dom/text "We're delighted to have you with us.  Sign up for our newsletter which has all the highlights")))
+            (when (= "" current-item-xt-id)    (dom/p (dom/a (dom/props {:href "https://nextapex.beehiiv.com"}) (dom/text "Sign up here for >NextApext Synopsis Newsletter"))))
+            (when (= "" current-item-xt-id)    (dom/hr))
             (when (= "R" online-user)
               (dom/div (dom/props {:class "userlistc fc"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id)))))
@@ -464,8 +475,10 @@
               (dom/text author))
             (dom/div (dom/props {:class ""})
               (NestedReplyCreate. current-item-xt-id xt-id))        
-            (dom/div (dom/props {:class "replies"})
-              (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (when id (ItemReply. id)))))
+            (if (not (empty? replies))
+              (dom/div (dom/props {:class "replies"})
+                (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (ItemReply. id)))))
+            
             (dom/div (dom/props {:class ""})
              (when (= "R" online-user) 
               (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗")))))))))
@@ -679,7 +692,7 @@
                   ;;else
                   (dom/div (dom/props {:class "atag"}) (dom/text "▲ " (count upvotes-set) " " title)))))))
 
-#?(:cljs  (def app-version "0.0.0.1.2.2.2.1.0"))
+#?(:cljs  (def app-version "0.0.0.1.2.2.2.1.887"))
 
 #?(:cljs (defn save-version-to-storage [version]
           (.setItem (.-localStorage js/window) "appVersion" version)))
