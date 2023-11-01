@@ -34,7 +34,10 @@
     (dom/div (dom/props {:class "newsitemlistc fc"})
         (if (not= "" current-item-id)
           (NewsItem. current-item-id "0")
-          (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(newsitem-records db))] (NewsItem. id rank))))
+          (do 
+           (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(newsitem-records db))] (NewsItem. id rank)))
+           ;(e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(all-tag-records db))] (TagItem. id)))
+           ))
         
         (when (not= "" online-user) (NewsItemCreate.)))
     (dom/ul (dom/props {:class "fc"})
@@ -257,7 +260,7 @@
                     (dom/text "Logout"))
                   (LoginPart.)))
             (dom/div (dom/props {:class "fr"})
-              (when (not= "" current-item-id) (ui/button (e/fn [] (reset! !current-item-id "") (reset! !current-item-xt-id)) (dom/text "<")))
+              (when (not= "" current-item-id) (ui/button (e/fn [] (reset! !current-item-id "") (reset! !current-item-xt-id) (update-url "/")) (dom/text "<")))
               (dom/div (dom/props {:class "fi"})
                 (dom/text current-item-id))
               (dom/div (dom/props {:class "fi"})
@@ -341,7 +344,7 @@
                 (dom/div (dom/props {:class "fi"})
                 (dom/text "")))
               (dom/div (dom/props {:class "taglistc fr"})
-                  (e/server (e/for-by :xt/id [{:keys [xt/id rank]} (e/offload #(tags-for-newsitem db id))] (TagItem. id)))
+                  (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(tags-for-newsitem db id))] (TagItem. id)))
                   (when (not= "" online-user) (TagCreate. xt-id)))
               (dom/div (dom/props {:class "xxc fr"})
                 (when (= "R" online-user) 
@@ -600,8 +603,7 @@
 
 (e/defn TagCreate [target-xt-id]
   (e/client
-   (dom/div
-    (dom/props {:class ["fr" "tagc"]})
+   (dom/div (dom/props {:class "fr tagc"})
     (InputSubmit. "new tag"
                   (e/fn [v]
                     (e/server
@@ -626,31 +628,20 @@
 
 #?(:clj
    (defn tags-for-newsitem [db newsitem-id]
-     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/id :tag/minted-at :tag/title :tag/upvotes-set :tag/upvotes])]
+     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/target :tag/id :tag/minted-at :tag/title :tag/upvotes-set :tag/upvotes])]
                      :where [[?t :tag/target nws-id]]
                      :in [nws-id]} newsitem-id)
        (map first)
-      ;;  (sort-by :tag/upvotes >)
+       (sort-by :tag/upvotes >)
        vec)))
 
 #?(:clj
    (defn all-tag-records [db]
-     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/id :tag/desc :tag/minted-at :tag/title :tag/member-count])]
+     (->> (xt/q db '{:find [(pull ?t [:xt/id :tag/minted-by :tag/id :tag/minted-at :tag/title :tag/member-count])]
                      :where [[?t :tag/id]]})
        (map first)
        (sort-by :tag/minted-at)
        vec)))
-#?(:clj
-   (defn newsitem-record-by-tag [db in-tag]
-     (try
-       (->> (xt/q db '{:find   [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes])]
-                        :where [[?i :item/tags nag]]
-                        :in    [nag]} in-tag)
-          (map first)
-          (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.5)) >) ;;score
-          (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
-          vec)
-        (catch InterruptedException e))))
 
 (e/defn TagItem [id]
   (e/server
@@ -662,12 +653,11 @@
           title (:tag/title e)
           target-id (:tag/target e)
           upvotes-set (:tag/upvotes-set e #{})
-          upvotes (:tag/upvotes e)
-          downvotes-set (:tag/downvotes-set e)
-          downvotes (:tag/downvotes e)]
+          upvotes (:tag/upvotes e)]
       (e/client
+        (.log js/console "here: " id title)
         (dom/div (dom/props {:class "fr"})
-          (dom/div (dom/props {:class "fc"}))
+          
           (dom/div (dom/props {:class "fc atag"})
             (dom/div (dom/props {:class "upvote-tag"})
              (if (not= "" online-user)
@@ -677,7 +667,7 @@
                     (e/offload
                       #(xt/submit-tx !xtdb 
                                     [[:xtdb.api/put 
-                                      (if (contains? upvotes-set online-user) ;;vw is verified login
+                                      (if (contains? upvotes-set online-user)
                                         ;; user has upvoted, remove their upvote
                                         (-> e
                                             (update :tag/upvotes-set disj online-user)
@@ -686,7 +676,9 @@
                                         (-> e
                                             (update :tag/upvotes-set conj online-user)
                                             (update :tag/upvotes inc)))]]))))
-                (dom/props {:class (if (contains? upvotes-set online-user) "alreadyupvoted" "notyetupvoted")}) 
+                (if (contains? upvotes-set online-user) 
+                  (dom/props {:class "alreadyupvoted"})
+                  (dom/props {:class "notyetupvoted"}))
                 (dom/text "▲ " (count upvotes-set)))
                 (dom/div (dom/text "▲ " (count upvotes-set)))))
             (dom/div 
@@ -706,7 +698,7 @@
                     (dom/text "✗")))))))))
 
 
-#?(:cljs  (def app-version "0.0.1.0.0.0.2"))
+#?(:cljs  (def app-version "0.0.1.0.0.0.3"))
 
 #?(:cljs (defn save-version-to-storage [version]
           (.setItem (.-localStorage js/window) "appVersion" version)))
