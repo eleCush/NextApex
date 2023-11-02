@@ -185,10 +185,10 @@
 
 (e/defn LoginPart []
  (e/client
-  (dom/input (dom/props {:placeholder "username"})
+  (dom/input (dom/props {:class "loginin" :placeholder "username"})
                  (dom/on "change" (e/fn [e]
                                      (reset! login-str (.-value dom/node) ))))
-  (dom/input (dom/props {:placeholder "password" :type "password"})
+  (dom/input (dom/props {:class "passwordin" :placeholder "password" :type "password"})
                  (dom/on "change" (e/fn [e]
                                      (reset! loginn-str (.-value dom/node) ))))
   (ui/button (e/fn []
@@ -250,10 +250,10 @@
             )
           (dom/div (dom/props {:class "bigc"})
             (dom/div (dom/props {:class "fr hdr"})
-              (dom/div (dom/props {:class "fi"})
-                (dom/text "NextApex"))
-              (dom/div (dom/props {:class "fi"})
-                (ui/button (e/fn [] (reset! !current-item-id "") (reset! !current-item-xt-id "")) (dom/text "top")));"ocean // main page"))
+              ;(dom/div (dom/props {:class "fi"})
+              ;  (dom/text "NextApex"))
+              (dom/div (dom/props {:class "fi w"})
+                (ui/button (e/fn [] (reset! !current-item-id "") (reset! !current-item-xt-id "") (update-url "/")) (dom/text "NextApex")));"ocean // main page"))
               (dom/div (dom/props {:class "fi"})
                 (dom/text online-user))
                 (if (not (empty? online-user))
@@ -285,14 +285,17 @@
             (dom/div (dom/props {:class "fr"})
               (reset! !current-item-xt-id (subs (get-current-path) 1))
               (when (not= "" current-item-xt-id) (ItemView.)))
-            (when (= "" current-item-xt-id)    (dom/h1 (dom/text "Welcome to NextApex.co")))
-            (when (= "" current-item-xt-id)    (dom/p (dom/text "Dynamic & Realtime Link Share")))
-            (when (= "" current-item-xt-id)    (dom/p (dom/text "Create an account with valid email below")))
-            (when (= "" current-item-xt-id)    (dom/p (dom/text "Once logged in, you can submit links with titles, upvote links, comment and reply on specific links by clicking # comments")))
-            (when (= "" current-item-xt-id)    (dom/p (dom/text "You can tag items and upvote the tags on items to help keep our collection organized long into the future")))
-            (when (= "" current-item-xt-id)    (dom/p (dom/text "We're delighted to have you with us.  Sign up for our newsletter which has all the highlights")))
-            (when (= "" current-item-xt-id)    (dom/p (dom/a (dom/props {:href "https://nextapex.beehiiv.com"}) (dom/text "Sign up here for >NextApext Synopsis Newsletter"))))
-            (when (= "" current-item-xt-id)    (dom/hr))
+          (when (= "" current-item-id)
+            (dom/div
+              (dom/h1 (dom/text "Welcome to NextApex.co"))
+              (dom/p (dom/text "Dynamic & Realtime Link Share"))
+              (dom/p (dom/text "Create an account with valid email below"))
+              (dom/p (dom/text "Once logged in, you can submit links with titles, upvote links, comment and reply on specific links by clicking # comments"))
+              (dom/p (dom/text "You can tag items and upvote the tags on items to help keep our collection organized long into the future"))
+              (dom/p (dom/text "We're delighted to have you with us.  Sign up for our newsletter which has all the highlights"))
+              (dom/p (dom/a (dom/props {:href "https://nextapex.beehiiv.com"}) (dom/text "Sign up here for >NextApext Synopsis Newsletter")))
+              (dom/hr)))
+
             (when (= "R" online-user)
               (dom/div (dom/props {:class "userlistc fc"})
                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(user-records db))] (UserItem. id)))))
@@ -328,8 +331,8 @@
             (when (< 0 rank) (dom/div (dom/props {:class "ranking"}) (dom/text rank ".")))
             (dom/div (dom/props {:class "fc"})
               (dom/div (dom/props {:class "fr"})
-               (when (and vis (not= "" online-user))
-                (ui/button (e/fn [] (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
+               (when vis
+                (ui/button (e/fn [] (if (not= "" online-user) (e/server (e/discard (e/offload #(xt/submit-tx !xtdb 
                   [[:xtdb.api/put
                   {:xt/id xt-id
                   :item/link link
@@ -338,17 +341,17 @@
                   :item/id item-id
                   :item/minted-by author
                   :item/upvotes (inc upvotes)
-                  :item/minted-at item-minted-at}]]))) (e/client (reset! !vis false)))) (dom/props {:class ["w" "upvotebutton"]}) (dom/text "▲")))
+                  :item/minted-at item-minted-at}]]))) (e/client (reset! !vis false))))) (dom/props {:class ["w" "upvotebutton"] :title (if (= "" online-user) "Must be logged in to upvote items" "Upvote this item")}) (dom/text "▲")))
                 (dom/div (dom/props {:class "fi fg bb"})
                 (dom/a (dom/props {:href link :target "_atarashii"}) (dom/text title))))
               (dom/div (dom/props {:class "fr gr"})  
-                (dom/div (dom/props {:class "fi w pts"})
+                (dom/div (dom/props {:class "fi w pts" :title "The number of upvotes on this news-item"})
                 (dom/text upvotes (if (= 1 upvotes) " point" " points")))
-                (dom/div (dom/props {:class "fi ww"})
+                (dom/div (dom/props {:class "fi ww" :title "Who done added it"})
                 (dom/text "By:" author))
-                (dom/div (dom/props {:class "fi ww nbrk"})
-                (dom/text "⧖" (.toFixed (/ time-since-minted (* 60 1000 60)) 0) " hours ago"))
-                (dom/div (dom/props {:class "fi ww" :alt "Newtonian (anti-gravity)"})
+                (dom/div (dom/props {:class "fi ww nbrk" :title "time since posted"})
+                (dom/text "⧖" (.toFixed (/ time-since-minted (* 60 1000 60)) 0) " hours ago")) ;
+                (dom/div (dom/props {:class "fi ww" :title "Newtonian (anti-gravity)"})
                 (dom/text "↑" (.toFixed score 0)))
                 (dom/div (dom/props {:class "fiww"})
                 (ui/button (e/fn [] (reset! !current-item-id item-id) (update-url item-id) (reset! !current-item-xt-id xt-id)) (dom/props {:class "discuss"}) (dom/text reply-count (if (= 1 reply-count) " comment" " comments"))))
@@ -437,7 +440,8 @@
           item-id (:item/id e)
           author (:item/minted-by e)
           title (:item/title e)
-          minted-at (:item/minted-at e)]
+          minted-at (:item/minted-at e)
+          top-level-replies (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))]
       (e/client
         (dom/div (dom/props {:class "itemview oo"})
           (if (not (= "" current-item-id))
@@ -452,7 +456,9 @@
                 (ReplyCreate. xt-id xt-id))
             
               (dom/div (dom/props {:class "replies"})
-                (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id item-xt-id))] (ItemReply. id))))
+                (e/server (e/for-by :xt/id [{:keys [xt/id]} top-level-replies] (ItemReply. id))))
+
+                ;(.log js/console "[TLR] " top-level-replies)
                 
                 
                 )))))))
@@ -475,9 +481,11 @@
               (dom/text author))
             (dom/div (dom/props {:class ""})
               (NestedReplyCreate. current-item-xt-id xt-id))        
-            (if (not (empty? replies))
-              (dom/div (dom/props {:class "replies"})
-                (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (ItemReply. id)))))
+
+            (dom/div (dom/props {:class "replies"})
+              (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (ItemReply. id))))
+
+              ;(.log js/console "[INR] " replies)
             
             (dom/div (dom/props {:class ""})
              (when (= "R" online-user) 
@@ -491,7 +499,8 @@
           minted-at (:reply/minted-at r)
           item-xt-id (:reply/item-xt-id r)
           upvotes (:reply/upvotes r)
-          parent (:reply/parent-xt-id r)]
+          parent (:reply/parent-xt-id r)
+          replies (e/offload #(reply-with-descendant-records db item-xt-id xt-id))]
       (e/client
         (dom/div (dom/props {:class "itemreplies oo in2"})
           (dom/div (dom/props {:class ""})
@@ -502,7 +511,10 @@
             (NestedReplyCreate. current-item-xt-id xt-id))
           (dom/div (dom/props {:class ""})
              (dom/div (dom/props {:class "replies"})
-               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyB. id)))))
+               (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (ItemReplyB. id)))))
+
+          ;(.log js/console "[IR] " replies)
+
           (dom/div (dom/props {:class ""})
            (when (= "R" online-user) 
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗")))))))))
@@ -515,7 +527,8 @@
           minted-at (:reply/minted-at r)
           item-xt-id (:reply/item-xt-id r)
           upvotes (:reply/upvotes r)
-          parent (:reply/parent-xt-id r)]
+          parent (:reply/parent-xt-id r)
+          replies (e/offload #(reply-with-descendant-records db item-xt-id xt-id))]
       (e/client
         (dom/div (dom/props {:class "itemreplies oo in3"})
           (dom/div (dom/props {:class ""})
@@ -526,7 +539,9 @@
             (NestedReplyCreate. current-item-xt-id xt-id))
            (dom/div (dom/props {:class ""})
              (dom/div (dom/props {:class "replies"})
-               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyC. id)))))
+               (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (ItemReplyC. id)))))
+
+          ;(.log js/console "[IRB] " replies)
           (dom/div (dom/props {:class ""})
            (when (= "R" online-user) 
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗")))))))))
@@ -539,7 +554,8 @@
           minted-at (:reply/minted-at r)
           item-xt-id (:reply/item-xt-id r)
           upvotes (:reply/upvotes r)
-          parent (:reply/parent-xt-id r)]
+          parent (:reply/parent-xt-id r)
+          replies (e/offload #(reply-with-descendant-records db item-xt-id xt-id))]
       (e/client
         (dom/div (dom/props {:class "itemreplies oo in4"})
           (dom/div (dom/props {:class ""})
@@ -550,7 +566,9 @@
             (NestedReplyCreate. current-item-xt-id xt-id))
            (dom/div (dom/props {:class ""})
              (dom/div (dom/props {:class "replies"})
-               (e/server (e/for-by :xt/id [{:keys [xt/id]} (e/offload #(reply-with-descendant-records db item-xt-id xt-id))] (ItemReplyD. id)))))
+               (e/server (e/for-by :xt/id [{:keys [xt/id]} replies] (ItemReplyD. id)))))
+          
+          ;(.log js/console "[IRC] " replies)
           (dom/div (dom/props {:class ""})
            (when (= "R" online-user) 
              (ui/button (e/fn [] (e/server (e/discard (xt/submit-tx !xtdb [[:xtdb.api/delete xt-id]])))) (dom/props {:class "delete"}) (dom/text "✗")))))))))
@@ -668,31 +686,29 @@
           upvotes-set (:tag/upvotes-set e #{})
           upvotes (:tag/upvotes e)]
             (e/client
-              (if (not= "" online-user)
-                (ui/button 
-                  (e/fn [] 
-                    (e/server
-                      (e/offload
-                        #(xt/submit-tx !xtdb 
-                                      [[:xtdb.api/put 
-                                        (if (contains? upvotes-set online-user)
-                                          ;; user has upvoted, remove their upvote
-                                          (-> e
-                                              (update :tag/upvotes-set disj online-user)
-                                              (update :tag/upvotes dec))
-                                          ;; user hasn't upvoted, include their upvote
-                                          (-> e
-                                              (update :tag/upvotes-set conj online-user)
-                                              (update :tag/upvotes inc)))]]))))
-                  (if (contains? upvotes-set online-user) 
-                    (dom/div (dom/props {:class "alreadyupvoted"}) (dom/text "▲ " (count upvotes-set)))
-                    (dom/div (dom/props {:class "notyetupvoted"}) (dom/text "▲ " (count upvotes-set))))
-                  (dom/text  " " title)
-                  (dom/props {:class "atag"}))
-                  ;;else
-                  (dom/div (dom/props {:class "atag"}) (dom/text "▲ " (count upvotes-set) " " title)))))))
+              (ui/button 
+                (e/fn [] 
+                  (if (not= "" online-user)
+                  (e/server
+                    (e/offload
+                      #(xt/submit-tx !xtdb 
+                                    [[:xtdb.api/put 
+                                      (if (contains? upvotes-set online-user)
+                                        ;; user has upvoted, remove their upvote
+                                        (-> e
+                                            (update :tag/upvotes-set disj online-user)
+                                            (update :tag/upvotes dec))
+                                        ;; user hasn't upvoted, include their upvote
+                                        (-> e
+                                            (update :tag/upvotes-set conj online-user)
+                                            (update :tag/upvotes inc)))]])))))
+                (if (contains? upvotes-set online-user)
+                  (dom/div (dom/props {:class "alreadyupvoted" :title (if (= "" online-user) "Must be logged in to un-upvote tags" "Un-upvote this tag")}) (dom/text "▲ " (count upvotes-set)))
+                  (dom/div (dom/props {:class "notyetupvoted" :title (if (= "" online-user) "Must be logged in to upvote tags" "Upvote this tag")}) (dom/text "▲ " (count upvotes-set))))
+                (dom/text  " " title)
+                (dom/props {:class "atag"}))))))
 
-#?(:cljs  (def app-version "0.0.0.1.2.2.2.1.887"))
+#?(:cljs  (def app-version "0.0.0.1.2.2.2.2.111.2222.111.001.2"))
 
 #?(:cljs (defn save-version-to-storage [version]
           (.setItem (.-localStorage js/window) "appVersion" version)))
