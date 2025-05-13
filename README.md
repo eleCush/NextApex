@@ -1,8 +1,8 @@
-# REMEWS
-## listening parties & album reviews ("REMEWS music reviews")
+# NextApex
+## Multiplayer Link Share similar to Hacker News,
+Built in Electric Clojure with nested client/server blocks.
+Main app in one file todo_list.cljc
 
-
-Logo is pink argyll, butterfly
 
 * export XTDB_ENABLE_BYTEUTILS_SHA1=true
 
