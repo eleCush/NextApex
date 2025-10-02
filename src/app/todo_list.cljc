@@ -387,7 +387,7 @@
 
 #?(:clj
     (defn newsitem-records [db tribe-id]
-      (let [gravity 1.1]
+      (let [gravity 0.5]
         (if (= "" tribe-id)
           (try
             (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes :item/tribe])]
