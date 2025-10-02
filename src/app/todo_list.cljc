@@ -310,7 +310,7 @@
           upvotes (or (:item/upvotes e) 0)
           time-since-minted (- e/system-time-ms item-minted-at)
           hrs-since-minted (/ time-since-minted 3600)
-          gravity 1.1
+          gravity 0.5
           score (/ upvotes (Math/pow (+ hrs-since-minted 2) gravity))
           reply-count (e/server (e/offload #(get-reply-count-from-newsitem-id db xt-id)))]
       (e/client
