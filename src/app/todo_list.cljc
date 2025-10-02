@@ -188,7 +188,7 @@
                  (dom/on "change" (e/fn [e]
                                      (reset! loginn-str (.-value dom/node) ))))
   (ui/button (e/fn []
-                (POST "https://nextapex.co/nextapex-login"
+                (POST "nextapex-login"
                    {:params {:user ls :pass lpw}
                     :format :raw
                    :handler handle-response}))
@@ -264,7 +264,7 @@
                 (dom/text online-user))
               (if (not (empty? online-user))
                   (ui/button (e/fn []
-                    (POST "https://nextapex.co/logout"
+                    (POST "logout"
                       {:params {:hey "log me out"}
                        :format :raw
                        :handler handle-logout-response}))
