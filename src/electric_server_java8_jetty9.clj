@@ -26,6 +26,9 @@
 ;;login links use :bcrypt
 ;; passwords use :argon2
 
+(defn authenticate [username password] 
+  username) ;; demo (accept-all) authentication
+  ;;kept because middleware wraps it
 
 (defn clear-cookie [response cookie-name]
   (assoc-in response [:headers "Set-Cookie"]
