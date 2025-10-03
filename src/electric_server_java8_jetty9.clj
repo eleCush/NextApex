@@ -23,16 +23,6 @@
            [java.net BindException]
            [org.eclipse.jetty.server.handler.gzip GzipHandler]))
 
-(defn authenticate [username password] 
-  username) ; demo (accept-all) authentication
-
-(def mail-config
- {:host "smtp-relay.sendinblue.com"
-  :port 587
-  :user "v1nc3ntpull1ng@gmail.com"
-  :pass "CcEAZqTdVrDfRPzS"
-  :tls true})
-
 ;;login links use :bcrypt
 ;; passwords use :argon2
 
