@@ -393,7 +393,7 @@
             (->> (xt/q db '{:find [(pull ?i [:xt/id :item/minted-by :item/id :item/minted-at :item/link :item/upvotes :item/tribe])]
                               :where [[?i :item/id]]})
                 (map first)
-                (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.1)) >) ;;score
+                (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) gravity)) >) ;;score
                 (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
                 vec)
               (catch InterruptedException e))
@@ -403,7 +403,7 @@
                                       [?i :item/tribe tribe]]
                               :in [tribe]} tribe-id)
                 (map first)
-                (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) 1.1)) >) ;;score
+                (sort-by #(/ (get % :item/upvotes) (Math/pow (+ (/ (- (System/currentTimeMillis) (get % :item/minted-at)) 3600) 2) gravity)) >) ;;score
                 (map-indexed (fn [idx item] (assoc item :rank (inc idx))))
                 vec)
               (catch InterruptedException e))))))
